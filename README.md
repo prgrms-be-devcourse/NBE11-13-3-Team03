@@ -75,7 +75,7 @@
 
 ### Backend
 
-* Java 25
+* Java 25 -> Kotlin
 * Spring Boot 4.1.0
 * Spring MVC
 * Spring Data JPA
