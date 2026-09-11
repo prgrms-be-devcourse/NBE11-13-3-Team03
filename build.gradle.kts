@@ -1,0 +1,73 @@
+plugins {
+    java
+    kotlin("jvm") version "2.3.21"
+    kotlin("plugin.spring") version "2.3.21"
+    // JPA preset supplies no-arg constructors and opens entity classes.
+    kotlin("plugin.jpa") version "2.3.21"
+    // Allow Kotlin to reference Lombok-generated members in Java sources.
+    kotlin("plugin.lombok") version "2.3.21"
+    id("org.springframework.boot") version "4.1.0"
+    id("io.spring.dependency-management") version "1.1.7"
+}
+
+group = "com.team3"
+version = "0.0.1-SNAPSHOT"
+description = "Gudit"
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
+}
+
+kotlin {
+    jvmToolchain(25)
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
+    implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
+    implementation("me.paulschwarz:spring-dotenv:3.0.0")
+    implementation("io.jsonwebtoken:jjwt-api:0.13.0")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")// JWT API
+
+    compileOnly("org.projectlombok:lombok")
+
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")    // JWT 구현체
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0") // JSON 처리를 위한 Jackson 모듈
+    runtimeOnly("org.postgresql:postgresql")
+
+    annotationProcessor("org.projectlombok:lombok")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-security-oauth2-client-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-thymeleaf-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+
+    testCompileOnly("org.projectlombok:lombok")
+
+    testRuntimeOnly("com.h2database:h2")
+
+    testAnnotationProcessor("org.projectlombok:lombok")
+}
+
+tasks.named<Test>("test") {
+    useJUnitPlatform()
+}
