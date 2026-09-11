@@ -1,0 +1,10 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: gudit-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+          #호스트 파일 : 컨테이너 내부 경로 : 접근 권한(ro : 읽기전용 설정)
+      - ./monitoring/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+    restart: unless-stopped

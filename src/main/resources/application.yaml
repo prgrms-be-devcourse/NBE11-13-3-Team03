@@ -65,3 +65,9 @@ toss:
 
 springdoc:
   show-actuator: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
