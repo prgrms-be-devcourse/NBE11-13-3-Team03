@@ -22,6 +22,9 @@ import static com.team3.gudit.outbox.publisher.StockRestoreStreamConstants.*;
 @RequiredArgsConstructor
 public class StockRestoreConsumer {
 
+    private static final Duration PENDING_MIN_IDLE = Duration.ofSeconds(30);
+    private static final long PENDING_BATCH_SIZE = 10;
+
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
     private final InventoryService inventoryService;
@@ -55,6 +58,43 @@ public class StockRestoreConsumer {
         }
     }
 
+    @Scheduled(fixedDelay = 5000)
+    public void retryPending() {
+        StreamOperations<String, Object, Object> streamOperations =
+                stringRedisTemplate.opsForStream();
+
+        var pendingMessages = streamOperations.pending(
+                STOCK_RESTORE_STREAM,
+                STOCK_RESTORE_GROUP,
+                org.springframework.data.domain.Range.unbounded(),
+                PENDING_BATCH_SIZE,
+                PENDING_MIN_IDLE
+        );
+
+        if (pendingMessages == null || pendingMessages.isEmpty()) {
+            return;
+        }
+
+        for (var pendingMessage : pendingMessages) {
+            List<MapRecord<String, Object, Object>> claimedRecords =
+                    streamOperations.claim(
+                            STOCK_RESTORE_STREAM,
+                            STOCK_RESTORE_GROUP,
+                            STOCK_RESTORE_CONSUMER,
+                            PENDING_MIN_IDLE,
+                            pendingMessage.getId()
+                    );
+
+            if (claimedRecords == null || claimedRecords.isEmpty()) {
+                continue;
+            }
+
+            for (MapRecord<String, Object, Object> record : claimedRecords) {
+                processRecord(streamOperations, record);
+            }
+        }
+    }
+
     private void processRecord(
             StreamOperations<String, Object, Object> streamOperations,
             MapRecord<String, Object, Object> record
@@ -74,7 +114,8 @@ public class StockRestoreConsumer {
                             StockRestoreEventPayload.class
                     );
 
-            inventoryService.restoreStock(
+            inventoryService.restoreStockIdempotently(
+                    eventId,
                     eventPayload.saleId(),
                     eventPayload.userId(),
                     eventPayload.quantity()

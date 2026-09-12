@@ -46,6 +46,16 @@ public class InventoryServiceImpl implements InventoryService {
         sale.restoreStock(quantity);
     }
 
+    @Override
+    public void restoreStockIdempotently(
+            String eventId,
+            Long saleId,
+            Long userId,
+            int quantity
+    ) {
+        restoreStock(saleId, userId, quantity);
+    }
+
     private void validateQuantity(int quantity) {
         if (quantity <= 0) {
             throw new BusinessException(

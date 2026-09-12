@@ -46,8 +46,19 @@ public class StockRestoreConsumerGroupInitializer implements ApplicationRunner {
         }
     }
 
-    private boolean isGroupAlreadyExists(RuntimeException e) {
-        return e.getMessage() != null
-                && e.getMessage().contains("BUSYGROUP");
+    private boolean isGroupAlreadyExists(Throwable throwable) {
+        Throwable current = throwable;
+
+        while (current != null) {
+            String message = current.getMessage();
+
+            if (message != null && message.contains("BUSYGROUP")) {
+                return true;
+            }
+
+            current = current.getCause();
+        }
+
+        return false;
     }
 }
