@@ -142,4 +142,48 @@ class OutboxPublisherTest {
         // then
         verify(stringRedisTemplate, never()).opsForStream();
     }
+
+    @Test
+    @DisplayName("Redis Stream 발행 실패 후 다음 실행에서 재발행에 성공하면 PUBLISHED로 변경한다")
+    void retryPublishAfterFailure() {
+        // given
+        OutboxEvent event = OutboxEvent.create(
+                "trace-123",
+                OutboxEventType.STOCK_RESTORE_REQUESTED,
+                """
+                {"purchaseId":1,"saleId":2,"userId":3,"quantity":1}
+                """
+        );
+
+        when(outboxEventRepository.findAllByStatusOrderByCreatedAtAsc(
+                OutboxEventStatus.PENDING
+        )).thenReturn(
+                List.of(event),
+                List.of(event)
+        );
+
+        when(stringRedisTemplate.opsForStream())
+                .thenReturn(streamOperations);
+
+        when(streamOperations.add(any(MapRecord.class)))
+                .thenThrow(new RuntimeException("Redis connection failed"))
+                .thenReturn(RecordId.of("1-0"));
+
+        // when - 첫 번째 발행 실패
+        outboxPublisher.publishPendingEvents();
+
+        // then
+        assertThat(event.getStatus())
+                .isEqualTo(OutboxEventStatus.PENDING);
+
+        // when - 다음 스케줄에서 재발행
+        outboxPublisher.publishPendingEvents();
+
+        // then
+        assertThat(event.getStatus())
+                .isEqualTo(OutboxEventStatus.PUBLISHED);
+
+        verify(streamOperations, times(2))
+                .add(any(MapRecord.class));
+    }
 }
