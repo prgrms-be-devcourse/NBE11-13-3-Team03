@@ -1,5 +1,6 @@
 package com.team3.gudit.purchase.service;
 
+import com.team3.gudit.outbox.service.OutboxEventService;
 import com.team3.gudit.payment.entity.Payment;
 import com.team3.gudit.payment.entity.PaymentStatus;
 import com.team3.gudit.payment.repository.PaymentRepository;
@@ -7,7 +8,6 @@ import com.team3.gudit.purchase.entity.Purchase;
 import com.team3.gudit.purchase.entity.PurchaseStatus;
 import com.team3.gudit.purchase.repository.PurchaseRepository;
 import com.team3.gudit.sale.domain.entity.Sale;
-import com.team3.gudit.sale.service.InventoryService;
 import com.team3.gudit.user.domain.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,7 +33,7 @@ class PurchaseTimeoutServiceTest {
     private PaymentRepository paymentRepository;
 
     @Mock
-    private InventoryService inventoryService;
+    private OutboxEventService outboxEventService;
 
     private PurchaseTimeoutService purchaseTimeoutService;
 
@@ -42,14 +42,14 @@ class PurchaseTimeoutServiceTest {
         purchaseTimeoutService = new PurchaseTimeoutService(
                 purchaseRepository,
                 paymentRepository,
-                inventoryService
+                outboxEventService
         );
     }
 
     @Test
     @DisplayName(
             "PENDING_PAYMENT Purchase와 READY Payment를 "
-                    + "timeout 취소하고 재고를 복구한다"
+                    + "timeout 취소하고 재고 복구 Outbox 이벤트를 저장한다"
     )
     void cancelExpiredPurchase() {
         // given
@@ -105,11 +105,13 @@ class PurchaseTimeoutServiceTest {
         assertThat(payment.getStatus())
                 .isEqualTo(PaymentStatus.CANCELED);
 
-        verify(inventoryService).restoreStock(
-                saleId,
-                userId,
-                quantity
-        );
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
+                        saleId,
+                        userId,
+                        quantity
+                );
 
         verify(lockedPurchase).cancel();
     }
@@ -117,7 +119,7 @@ class PurchaseTimeoutServiceTest {
     @Test
     @DisplayName(
             "Purchase가 이미 처리된 상태이면 "
-                    + "timeout 취소와 재고 복구를 하지 않는다"
+                    + "timeout 취소와 재고 복구 이벤트 저장을 하지 않는다"
     )
     void skipAlreadyProcessedPurchase() {
         // given
@@ -143,7 +145,7 @@ class PurchaseTimeoutServiceTest {
         assertThat(canceled).isFalse();
 
         verifyNoInteractions(paymentRepository);
-        verifyNoInteractions(inventoryService);
+        verifyNoInteractions(outboxEventService);
         verify(lockedPurchase, never()).cancel();
     }
 
@@ -188,13 +190,13 @@ class PurchaseTimeoutServiceTest {
         assertThat(payment.getStatus())
                 .isEqualTo(PaymentStatus.IN_PROGRESS);
 
-        verifyNoInteractions(inventoryService);
+        verifyNoInteractions(outboxEventService);
         verify(lockedPurchase, never()).cancel();
     }
 
     @Test
     @DisplayName(
-            "Payment가 없으면 Purchase와 재고를 "
+            "Payment가 없으면 Purchase와 재고 복구 이벤트를 "
                     + "변경하지 않고 timeout 처리를 보류한다"
     )
     void skipWhenPaymentDoesNotExist() {
@@ -223,16 +225,15 @@ class PurchaseTimeoutServiceTest {
         // then
         assertThat(canceled).isFalse();
 
-        verifyNoInteractions(inventoryService);
+        verifyNoInteractions(outboxEventService);
         verify(lockedPurchase, never()).cancel();
     }
 
     @Test
     @DisplayName(
-            "재고 복구에서 예외가 발생하면 예외를 전파하고 "
-                    + "Purchase 취소를 실행하지 않는다"
+            "Outbox 저장에서 예외가 발생하면 예외를 전파한다"
     )
-    void propagateRestoreStockFailure() {
+    void propagateOutboxSaveFailure() {
         // given
         Long purchaseId = 100L;
         Long saleId = 10L;
@@ -275,9 +276,10 @@ class PurchaseTimeoutServiceTest {
         given(paymentRepository.findByPurchaseId(purchaseId))
                 .willReturn(Optional.of(payment));
 
-        doThrow(new RuntimeException("Redis 재고 복구 실패"))
-                .when(inventoryService)
-                .restoreStock(
+        doThrow(new RuntimeException("Outbox 저장 실패"))
+                .when(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
                         saleId,
                         userId,
                         quantity
@@ -289,9 +291,15 @@ class PurchaseTimeoutServiceTest {
                         .cancelExpiredPurchase(purchaseId)
         )
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Redis 재고 복구 실패");
+                .hasMessage("Outbox 저장 실패");
 
-        verify(lockedPurchase, never()).cancel();
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
+                        saleId,
+                        userId,
+                        quantity
+                );
     }
 
     @Test
@@ -315,6 +323,6 @@ class PurchaseTimeoutServiceTest {
         assertThat(canceled).isFalse();
 
         verifyNoInteractions(paymentRepository);
-        verifyNoInteractions(inventoryService);
+        verifyNoInteractions(outboxEventService);
     }
 }
