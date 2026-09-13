@@ -411,10 +411,13 @@ class PaymentServiceTest {
 
         verify(paymentTransactionService)
                 .compensateApprovalFailure(paymentKey);
+
+        verify(paymentTransactionService, never())
+                .requestPaymentCompensation(paymentKey);
     }
 
     @Test
-    @DisplayName("승인 후 DB 실패에 대한 보상 취소까지 실패하면 보상 실패 예외가 발생한다")
+    @DisplayName("승인 후 DB 실패에 대한 보상 취소까지 실패하면 보상 재처리 요청을 저장하고 예외가 발생한다")
     void confirmCompensationFailure() {
         // given
         String paymentKey = "payment-key";
@@ -470,6 +473,9 @@ class PaymentServiceTest {
 
         verify(paymentTransactionService, never())
                 .compensateApprovalFailure(paymentKey);
+
+        verify(paymentTransactionService)
+                .requestPaymentCompensation(paymentKey);
     }
 
     @Test
