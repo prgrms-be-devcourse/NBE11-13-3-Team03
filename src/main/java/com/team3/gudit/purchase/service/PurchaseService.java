@@ -15,6 +15,7 @@ import com.team3.gudit.purchase.repository.PurchaseRepository;
 import com.team3.gudit.sale.domain.entity.Sale;
 import com.team3.gudit.sale.domain.repository.SaleRepository;
 import com.team3.gudit.sale.exception.SaleErrorCode;
+import com.team3.gudit.sale.metrics.InventoryMetrics;
 import com.team3.gudit.sale.service.InventoryService;
 import com.team3.gudit.user.domain.entity.User;
 import com.team3.gudit.user.domain.repository.UserRepository;
@@ -38,6 +39,7 @@ public class PurchaseService {
     private final SaleRepository saleRepository;
     private final InventoryService inventoryService;
     private final PaymentService paymentService;
+    private final InventoryMetrics inventoryMetrics;
 
     @Transactional
     public PurchaseCreateResponse purchase(Long userId, Long saleId) {
@@ -285,12 +287,21 @@ public class PurchaseService {
 
                     @Override
                     public void afterCompletion(int status) {
-                        if (status != STATUS_COMMITTED) {
+                        if (status == STATUS_COMMITTED) {
+                            return;
+                        }
+
+                        try {
                             inventoryService.restoreStock(
                                     saleId,
                                     userId,
                                     quantity
                             );
+
+                            inventoryMetrics.recordRollback("success");
+                        } catch (RuntimeException exception) {
+                            inventoryMetrics.recordRollback("failed");
+                            throw exception;
                         }
                     }
                 }

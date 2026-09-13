@@ -1,0 +1,10 @@
+apiVersion: 1
+contactPoints:
+    - orgId: 1
+      name: Gudit Slack Alerts
+      receivers:
+        - uid: cfxzaz1zirny8b
+          type: slack
+          settings:
+            url: $GRAFANA_SLACK_WEBHOOK_URL
+          disableResolveMessage: false

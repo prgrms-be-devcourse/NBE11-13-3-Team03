@@ -6,6 +6,7 @@ import com.team3.gudit.auth.oauth2.OAuth2FailureHandler;
 import com.team3.gudit.auth.oauth2.OAuth2SuccessHandler;
 import com.team3.gudit.auth.security.CustomAuthenticationEntryPoint;
 import com.team3.gudit.auth.service.CustomOAuth2UserService;
+import com.team3.gudit.global.logging.TraceIdFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +28,7 @@ public class SecurityConfig {
     private final TokenAuthenticationFilter tokenAuthenticationFilter;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAuthorizationRequestResolver customAuthorizationRequestResolver;
+    private final TraceIdFilter traceIdFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -71,6 +73,19 @@ public class SecurityConfig {
                                 "/payments/test/**"
 
                         ).permitAll()
+                        //테스트 api
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/internal/performance-probe/server-error",
+                                "/api/internal/performance-probe/slow-response"
+                        )
+                        .permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/internal/performance-probe/rollback-failure"
+                        )
+                        .permitAll()
 
                         // 판매 조회
                         .requestMatchers(
@@ -130,6 +145,11 @@ public class SecurityConfig {
                 .addFilterBefore(
                         tokenAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+
+                .addFilterBefore(
+                        traceIdFilter,
+                        TokenAuthenticationFilter.class
                 );
 
         return http.build();

@@ -5,6 +5,7 @@ import com.team3.gudit.global.exception.ErrorCode;
 import com.team3.gudit.global.exception.GlobalErrorCode;
 import com.team3.gudit.sale.domain.repository.SaleRepository;
 import com.team3.gudit.sale.exception.SaleErrorCode;
+import com.team3.gudit.sale.metrics.InventoryMetrics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,13 +48,16 @@ class RedisInventoryServiceImplTest {
 
     private RedisInventoryServiceImpl inventoryService;
 
+    @Mock
+    private InventoryMetrics inventoryMetrics;
+
     @BeforeEach
     void setUp() {
         inventoryService = new RedisInventoryServiceImpl(
                 redisTemplate,
                 stockDecrementScript,
                 stockRestoreScript,
-                saleRepository
+                inventoryMetrics
         );
     }
 
