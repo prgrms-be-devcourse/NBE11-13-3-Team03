@@ -13,6 +13,7 @@ import com.team3.gudit.purchase.exception.PurchaseErrorCode;
 import com.team3.gudit.purchase.repository.PurchaseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -84,8 +85,16 @@ public class PaymentTransactionService {
         Payment payment = getPaymentByPaymentKey(paymentKey);
         Purchase purchase = getLockedPurchase(payment);
 
+        // 이전 처리에서 내부 보상까지 성공했지만
+        // ACK 전에 장애가 발생해 동일 이벤트가 재처리되는 경우
+        if (payment.getStatus() == PaymentStatus.CANCELED) {
+            return;
+        }
+
         payment.cancelAfterApprovalFailure();
 
+        // 사용자 취소나 Timeout 등 다른 흐름에서
+        // 이미 구매 취소가 처리된 경우 중복 복구 이벤트를 생성하지 않는다.
         if (purchase.getStatus()
                 != PurchaseStatus.PENDING_PAYMENT) {
             return;
@@ -297,6 +306,17 @@ public class PaymentTransactionService {
         purchase.cancel();
 
         saveStockRestoreRequested(purchase);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void requestPaymentCompensation(String paymentKey) {
+        Payment payment = getPaymentByPaymentKey(paymentKey);
+
+        outboxEventService.savePaymentCompensationRequired(
+                payment.getId(),
+                payment.getOrderId(),
+                payment.getPaymentKey()
+        );
     }
 
     private void saveStockRestoreRequested(

@@ -128,6 +128,10 @@ public class PaymentService {
         }
     }
 
+    public TossPaymentResponse getPayment(String paymentKey) {
+        return tossPaymentClient.getPayment(paymentKey);
+    }
+
     private TossPaymentResponse reconcilePayment(
             PaymentConfirmRequest request,
             TossPaymentException originalException
@@ -184,6 +188,10 @@ public class PaymentService {
             );
 
         } catch (RuntimeException compensationException) {
+            paymentTransactionService.requestPaymentCompensation(
+                    paymentKey
+            );
+
             throw new BusinessException(
                     PaymentErrorCode.PAYMENT_COMPENSATION_FAILED,
                     compensationException

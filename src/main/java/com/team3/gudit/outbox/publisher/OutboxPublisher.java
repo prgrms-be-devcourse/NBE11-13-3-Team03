@@ -42,10 +42,7 @@ public class OutboxPublisher {
             MapRecord<String, String, String> record =
                     StreamRecords
                             .newRecord()
-                            .in(
-                                    StockRestoreStreamConstants
-                                            .STOCK_RESTORE_STREAM
-                            )
+                            .in(resolveStream(event))
                             .ofMap(
                                     Map.of(
                                             "eventId",
@@ -86,5 +83,16 @@ public class OutboxPublisher {
                     e
             );
         }
+    }
+
+    private String resolveStream(OutboxEvent event) {
+        return switch (event.getEventType()) {
+            case STOCK_RESTORE_REQUESTED ->
+                    StockRestoreStreamConstants.STOCK_RESTORE_STREAM;
+
+            case PAYMENT_COMPENSATION_REQUIRED ->
+                    PaymentCompensationStreamConstants
+                            .PAYMENT_COMPENSATION_STREAM;
+        };
     }
 }
