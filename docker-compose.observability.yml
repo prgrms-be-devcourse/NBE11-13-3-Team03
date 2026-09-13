@@ -32,6 +32,7 @@ services:
       - "9121:9121"
     environment:
       REDIS_ADDR: redis://host.docker.internal:7002
+      REDIS_EXPORTER_CHECK_KEYS: "db0=sale:*:stock"
     restart: unless-stopped
 
   loki:
