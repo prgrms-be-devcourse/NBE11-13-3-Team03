@@ -8,9 +8,16 @@ scrape_configs:
       - targets:
           - "host.docker.internal:8080"
 
+  - job_name: "redis-local"
+    static_configs:
+      - targets:
+          - "redis-exporter-local:9121"
+        labels:
+          environment: "local"
+
   - job_name: "redis-performance"
     static_configs:
       - targets:
-          - "redis-exporter:9121"
+          - "redis-exporter-performance:9121"
         labels:
           environment: "performance"

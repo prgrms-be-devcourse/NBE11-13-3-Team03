@@ -25,9 +25,19 @@ services:
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     restart: unless-stopped
 
-  redis-exporter:
+  redis-exporter-local:
     image: oliver006/redis_exporter:latest
-    container_name: gudit-redis-exporter
+    container_name: gudit-redis-exporter-local
+    ports:
+      - "9122:9121"
+    environment:
+      REDIS_ADDR: redis://host.docker.internal:6379
+      REDIS_EXPORTER_CHECK_KEYS: "db0=sale:*:stock"
+    restart: unless-stopped
+
+  redis-exporter-performance:
+    image: oliver006/redis_exporter:latest
+    container_name: gudit-redis-exporter-performance
     ports:
       - "9121:9121"
     environment:

@@ -2,9 +2,9 @@
   "apiVersion": "dashboard.grafana.app/v2",
   "kind": "Dashboard",
   "metadata": {
-    "name": "gudit-observability-performance",
+    "name": "gudit-observability-local",
     "namespace": "default",
-    "uid": "3fd2cf97-ddb5-4fa4-9a87-70460776efe8",
+    "uid": "2c1a58e3-9992-4f0e-b441-a77a9a3deb5f",
     "resourceVersion": "1789367355631998",
     "generation": 24,
     "creationTimestamp": "2026-09-13T05:19:03Z",
@@ -18,7 +18,7 @@
       "grafana.app/managerId": "Gudit Dashboards",
       "grafana.app/saved-from-ui": "Grafana v13.2.1 (56cd3e9288)",
       "grafana.app/sourceChecksum": "1721cfc817b73e47114d17e272a551dd",
-      "grafana.app/sourcePath": "/var/lib/grafana/dashboards/gudit-observability-performance.json",
+      "grafana.app/sourcePath": "/var/lib/grafana/dashboards/gudit-observability-local.json",
       "grafana.app/sourceTimestamp": "1789367322000",
       "grafana.app/updatedBy": "user:bfy3n4ya1yz9ce",
       "grafana.app/updatedTimestamp": "2026-09-14T06:29:15Z"
@@ -158,7 +158,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(\n  irate(\n    redis_commands_processed_total{\n      job=\"redis-performance\",\n      environment=\"performance\"\n    }[$__rate_interval]\n  )\n)",
+                        "expr": "sum(\n  irate(\n    redis_commands_processed_total{\n      job=\"redis-local\",\n      environment=\"local\"\n    }[$__rate_interval]\n  )\n)",
                         "legendFormat": "Commands/sec",
                         "range": true
                       }
@@ -282,7 +282,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "redis_connected_clients{\n  job=\"redis-performance\",\n  environment=\"performance\"\n}",
+                        "expr": "redis_connected_clients{\n  job=\"redis-local\",\n  environment=\"local\"\n}",
                         "legendFormat": "Connected",
                         "range": true
                       }
@@ -303,7 +303,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "redis_blocked_clients{\n  job=\"redis-performance\",\n  environment=\"performance\"\n}",
+                        "expr": "redis_blocked_clients{\n  job=\"redis-local\",\n  environment=\"local\"\n}",
                         "instant": false,
                         "legendFormat": "Blocked",
                         "range": true
@@ -451,7 +451,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "redis_memory_used_bytes{\n  job=\"redis-performance\",\n  environment=\"performance\"\n}",
+                        "expr": "redis_memory_used_bytes{\n  job=\"redis-local\",\n  environment=\"local\"\n}",
                         "legendFormat": "Used Memory",
                         "range": true
                       }
@@ -472,7 +472,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "redis_memory_used_rss_bytes{\n  job=\"redis-performance\",\n  environment=\"performance\"\n}",
+                        "expr": "redis_memory_used_rss_bytes{\n  job=\"redis-local\",\n  environment=\"local\"\n}",
                         "instant": false,
                         "legendFormat": "RSS",
                         "range": true
@@ -619,7 +619,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (result) (\n  rate(\n    gudit_inventory_stock_decrease_total{\n      environment=\"performance\"\n    }[1m]\n  )\n)\nor label_replace(vector(0), \"result\", \"success\", \"result\", \".*\")\nor label_replace(vector(0), \"result\", \"rejected\", \"result\", \".*\")\nor label_replace(vector(0), \"result\", \"failed\", \"result\", \".*\")",
+                        "expr": "sum by (result) (\n  rate(\n    gudit_inventory_stock_decrease_total{\n      environment=\"local\"\n    }[1m]\n  )\n)\nor label_replace(vector(0), \"result\", \"success\", \"result\", \".*\")\nor label_replace(vector(0), \"result\", \"rejected\", \"result\", \".*\")\nor label_replace(vector(0), \"result\", \"failed\", \"result\", \".*\")",
                         "legendFormat": "{{result}}",
                         "range": true
                       }
@@ -784,7 +784,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "round(\n  clamp_min(\n    sum by (reason) (\n      idelta(\n        gudit_inventory_stock_decrease_total{\n          environment=\"performance\",\n          result=\"rejected\"\n        }[1m]\n      )\n    ),\n    0\n  )\n)",
+                        "expr": "round(\n  clamp_min(\n    sum by (reason) (\n      idelta(\n        gudit_inventory_stock_decrease_total{\n          environment=\"local\",\n          result=\"rejected\"\n        }[1m]\n      )\n    ),\n    0\n  )\n)",
                         "interval": "5",
                         "legendFormat": "{{reason}}",
                         "range": true
@@ -907,7 +907,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(\n  gudit_inventory_stock_soldout_total{\n    environment=\"performance\"\n  }\n)",
+                        "expr": "sum(\n  gudit_inventory_stock_soldout_total{\n    environment=\"local\"\n  }\n)",
                         "instant": true,
                         "legendFormat": "__auto",
                         "range": false
@@ -994,7 +994,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(\n  gudit_inventory_stock_restored_quantity_total{\n    environment=\"performance\"\n  }\n)",
+                        "expr": "sum(\n  gudit_inventory_stock_restored_quantity_total{\n    environment=\"local\"\n  }\n)",
                         "instant": true,
                         "legendFormat": "{{result}}",
                         "range": false
@@ -1081,7 +1081,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(\n  0.95,\n  sum by (le, script) (\n    rate(\n      gudit_inventory_lua_execution_seconds_bucket{\n        environment=\"performance\"\n      }[1m]\n    )\n  )\n) * 1000",
+                        "expr": "histogram_quantile(\n  0.95,\n  sum by (le, script) (\n    rate(\n      gudit_inventory_lua_execution_seconds_bucket{\n        environment=\"local\"\n      }[1m]\n    )\n  )\n) * 1000",
                         "legendFormat": "{{script}}",
                         "range": true
                       }
@@ -1202,7 +1202,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum by (result) (\n  gudit_inventory_stock_rollback_total{\n    environment=\"performance\"\n  }\n)",
+                        "expr": "sum by (result) (\n  gudit_inventory_stock_rollback_total{\n    environment=\"local\"\n  }\n)",
                         "instant": true,
                         "legendFormat": "__auto",
                         "range": false
@@ -1289,7 +1289,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "redis_key_value{\n  job=\"redis-performance\",\n  environment=\"performance\",\n  key=~\"sale:[0-9]+:stock\"\n}",
+                        "expr": "redis_key_value{\n  job=\"redis-local\",\n  environment=\"local\",\n  key=~\"sale:[0-9]+:stock\"\n}",
                         "legendFormat": "{{key}}",
                         "range": true
                       }
@@ -1409,7 +1409,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(\n  rate(\n    http_server_requests_seconds_count{\n      job=\"gudit\",\n      uri!~\"/actuator.*\"\n    }[1m]\n  )\n) or vector(0)",
+                        "expr": "sum(\n  rate(\n    http_server_requests_seconds_count{\n      job=\"gudit\",\n      environment=\"local\",\n      uri!~\"/actuator.*\"\n    }[1m]\n  )\n) or vector(0)",
                         "legendFormat": "Requests/sec",
                         "range": true
                       }
@@ -1530,7 +1530,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "(\n  histogram_quantile(\n    0.95,\n    sum by (le) (\n      rate(\n        http_server_requests_seconds_bucket{\n          job=\"gudit\",\n          uri!~\"/actuator.*\"\n        }[5m]\n      )\n    )\n  ) * 1000\n) or vector(0)",
+                        "expr": "(\n  histogram_quantile(\n    0.95,\n    sum by (le) (\n      rate(\n        http_server_requests_seconds_bucket{\n          job=\"gudit\",\n          environment=\"local\",\n          uri!~\"/actuator.*\"\n        }[5m]\n      )\n    )\n  ) * 1000\n) or vector(0)",
                         "legendFormat": "Response Time p95",
                         "range": true
                       }
@@ -1646,7 +1646,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "(\n  100 *\n  sum(\n    rate(\n      http_server_requests_seconds_count{\n        job=\"gudit\",\n        uri!~\"/actuator.*\",\n        status=~\"5..\"\n      }[5m]\n    )\n  )\n  /\n  clamp_min(\n    sum(\n      rate(\n        http_server_requests_seconds_count{\n          job=\"gudit\",\n          uri!~\"/actuator.*\"\n        }[5m]\n      )\n    ),\n    0.000001\n  )\n) or vector(0)",
+                        "expr": "(\n  100 *\n  sum(\n    rate(\n      http_server_requests_seconds_count{\n        job=\"gudit\",\n        environment=\"local\",\n        uri!~\"/actuator.*\",\n        status=~\"5..\"\n      }[5m]\n    )\n  )\n  /\n  clamp_min(\n    sum(\n      rate(\n        http_server_requests_seconds_count{\n          job=\"gudit\",\n          environment=\"local\",\n          uri!~\"/actuator.*\"\n        }[5m]\n      )\n    ),\n    0.000001\n  )\n) or vector(0)",
                         "legendFormat": "HTTP 5xx Error Rate",
                         "range": true
                       }
@@ -1763,7 +1763,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 *\nsum by (instance) (\n  jvm_memory_used_bytes{\n    job=\"gudit\",\n    area=\"heap\"\n  }\n)\n/\nclamp_min(\n  sum by (instance) (\n    jvm_memory_max_bytes{\n      job=\"gudit\",\n      area=\"heap\"\n    }\n  ),\n  1\n)",
+                        "expr": "100 *\nsum by (instance) (\n  jvm_memory_used_bytes{\n    job=\"gudit\",\n    environment=\"local\",\n    area=\"heap\"\n  }\n)\n/\nclamp_min(\n  sum by (instance) (\n    jvm_memory_max_bytes{\n      job=\"gudit\",\n      environment=\"local\",\n      area=\"heap\"\n    }\n  ),\n  1\n)",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -1884,7 +1884,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "100 *\navg_over_time(\n  process_cpu_usage{\n    job=\"gudit\"\n  }[1m]\n)",
+                        "expr": "100 *\navg_over_time(\n  process_cpu_usage{\n    job=\"gudit\",\n    environment=\"local\"\n  }[1m]\n)",
                         "legendFormat": "CPU Usage Rate",
                         "range": true
                       }
@@ -2005,7 +2005,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "jvm_threads_live_threads{\n  job=\"gudit\"\n}",
+                        "expr": "jvm_threads_live_threads{\n  job=\"gudit\",\n  environment=\"local\"\n}",
                         "interval": "",
                         "legendFormat": "Live",
                         "range": true
@@ -2027,7 +2027,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "jvm_threads_peak_threads{\n  job=\"gudit\"\n}",
+                        "expr": "jvm_threads_peak_threads{\n  job=\"gudit\",\n  environment=\"local\"\n}",
                         "instant": false,
                         "legendFormat": "Peak",
                         "range": true
@@ -2148,7 +2148,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "hikaricp_connections_active{\n  job=\"gudit\"\n}",
+                        "expr": "hikaricp_connections_active{\n  job=\"gudit\",\n  environment=\"local\"\n}",
                         "legendFormat": "Active",
                         "range": true
                       }
@@ -2169,7 +2169,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "hikaricp_connections_idle{\n  job=\"gudit\"\n}",
+                        "expr": "hikaricp_connections_idle{\n  job=\"gudit\",\n  environment=\"local\"\n}",
                         "instant": false,
                         "legendFormat": "Idle",
                         "range": true
@@ -2191,7 +2191,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "hikaricp_connections_pending{\n  job=\"gudit\"\n}",
+                        "expr": "hikaricp_connections_pending{\n  job=\"gudit\",\n  environment=\"local\"\n}",
                         "instant": false,
                         "legendFormat": "Pending",
                         "range": true
@@ -2213,7 +2213,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "hikaricp_connections_max{\n  job=\"gudit\"\n}",
+                        "expr": "hikaricp_connections_max{\n  job=\"gudit\",\n  environment=\"local\"\n}",
                         "instant": false,
                         "legendFormat": "Max",
                         "range": true
@@ -2334,7 +2334,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "redis_up{job=\"redis-performance\", environment=\"performance\"}",
+                        "expr": "redis_up{job=\"redis-local\", environment=\"local\"}",
                         "legendFormat": "__auto",
                         "range": true
                       }
@@ -2720,7 +2720,7 @@
       "hideTimepicker": false,
       "fiscalYearStartMonth": 0
     },
-    "title": "Gudit Observability - Performance",
+    "title": "Gudit Observability - Local",
     "variables": [],
     "preferences": {
       "layout": {
