@@ -1,6 +1,7 @@
 package com.team3.gudit.payment.service;
 
 import com.team3.gudit.global.exception.BusinessException;
+import com.team3.gudit.outbox.service.OutboxEventService;
 import com.team3.gudit.payment.dto.TossPaymentResponse;
 import com.team3.gudit.payment.entity.Payment;
 import com.team3.gudit.payment.entity.PaymentStatus;
@@ -10,7 +11,6 @@ import com.team3.gudit.purchase.entity.Purchase;
 import com.team3.gudit.purchase.entity.PurchaseStatus;
 import com.team3.gudit.purchase.exception.PurchaseErrorCode;
 import com.team3.gudit.purchase.repository.PurchaseRepository;
-import com.team3.gudit.sale.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,8 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentTransactionService {
 
     private final PaymentRepository paymentRepository;
-    private final InventoryService inventoryService;
     private final PurchaseRepository purchaseRepository;
+    private final OutboxEventService outboxEventService;
 
     @Transactional
     public void startPayment(
@@ -64,43 +64,36 @@ public class PaymentTransactionService {
     public void failPayment(String orderId) {
         Payment payment = getPaymentByOrderId(orderId);
         Purchase purchase = getLockedPurchase(payment);
-//        Purchase purchase = payment.getPurchase();
 
         payment.fail();
 
-        // 사용자 취소나 타임아웃이 이미 처리한 구매인지 체크
-        if (purchase.getStatus() != PurchaseStatus.PENDING_PAYMENT) {
+        // 사용자 취소나 timeout이 이미 처리한 구매이면
+        // 재고 복구 이벤트를 중복 생성하지 않는다.
+        if (purchase.getStatus()
+                != PurchaseStatus.PENDING_PAYMENT) {
             return;
         }
 
-        inventoryService.restoreStock(
-                purchase.getSale().getId(),
-                purchase.getUser().getId(),
-                purchase.getQuantity()
-        );
-
         purchase.cancel();
+
+        saveStockRestoreRequested(purchase);
     }
 
     @Transactional
     public void compensateApprovalFailure(String paymentKey) {
         Payment payment = getPaymentByPaymentKey(paymentKey);
         Purchase purchase = getLockedPurchase(payment);
-//        Purchase purchase = payment.getPurchase();
 
         payment.cancelAfterApprovalFailure();
 
-        if (purchase.getStatus() != PurchaseStatus.PENDING_PAYMENT) {
+        if (purchase.getStatus()
+                != PurchaseStatus.PENDING_PAYMENT) {
             return;
         }
 
-        inventoryService.restoreStock(
-                purchase.getSale().getId(),
-                purchase.getUser().getId(),
-                purchase.getQuantity()
-        );
-
         purchase.cancel();
+
+        saveStockRestoreRequested(purchase);
     }
 
     @Transactional
@@ -247,11 +240,7 @@ public class PaymentTransactionService {
         payment.cancelByWebhook();
         purchase.cancel();
 
-        inventoryService.restoreStock(
-                purchase.getSale().getId(),
-                purchase.getUser().getId(),
-                purchase.getQuantity()
-        );
+        saveStockRestoreRequested(purchase);
     }
 
     @Transactional
@@ -271,18 +260,15 @@ public class PaymentTransactionService {
             return;
         }
 
-        if (purchase.getStatus() != PurchaseStatus.PENDING_PAYMENT) {
+        if (purchase.getStatus()
+                != PurchaseStatus.PENDING_PAYMENT) {
             return;
         }
 
         payment.failByWebhook();
         purchase.cancel();
 
-        inventoryService.restoreStock(
-                purchase.getSale().getId(),
-                purchase.getUser().getId(),
-                purchase.getQuantity()
-        );
+        saveStockRestoreRequested(purchase);
     }
 
     @Transactional
@@ -302,14 +288,22 @@ public class PaymentTransactionService {
             return;
         }
 
-        if (purchase.getStatus() != PurchaseStatus.PENDING_PAYMENT) {
+        if (purchase.getStatus()
+                != PurchaseStatus.PENDING_PAYMENT) {
             return;
         }
 
         payment.cancelByWebhook();
         purchase.cancel();
 
-        inventoryService.restoreStock(
+        saveStockRestoreRequested(purchase);
+    }
+
+    private void saveStockRestoreRequested(
+            Purchase purchase
+    ) {
+        outboxEventService.saveStockRestoreRequested(
+                purchase.getId(),
                 purchase.getSale().getId(),
                 purchase.getUser().getId(),
                 purchase.getQuantity()

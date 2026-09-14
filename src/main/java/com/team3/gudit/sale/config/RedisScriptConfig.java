@@ -41,4 +41,22 @@ public class RedisScriptConfig {
 
         return redisScript;
     }
+
+    @Bean
+    public DefaultRedisScript<Long> stockRestoreIdempotentScript() {
+        DefaultRedisScript<Long> redisScript =
+                new DefaultRedisScript<>();
+
+        redisScript.setScriptSource(
+                new ResourceScriptSource(
+                        new ClassPathResource(
+                                "scripts/stock_restore_idempotent.lua"
+                        )
+                )
+        );
+
+        redisScript.setResultType(Long.class);
+
+        return redisScript;
+    }
 }

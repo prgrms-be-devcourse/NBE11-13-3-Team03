@@ -30,6 +30,7 @@ public class RedisInventoryServiceImpl implements InventoryService {
     private final StringRedisTemplate redisTemplate;
     private final DefaultRedisScript<Long> stockDecrementScript;
     private final DefaultRedisScript<Long> stockRestoreScript;
+    private final DefaultRedisScript<Long> stockRestoreIdempotentScript;
     private final SaleRepository saleRepository;
 
     @Override
@@ -69,6 +70,42 @@ public class RedisInventoryServiceImpl implements InventoryService {
                 stockRestoreScript,
                 List.of(stockKey, userKey),
                 String.valueOf(quantity)
+        );
+
+        if (result == null) {
+            throw new BusinessException(
+                    GlobalErrorCode.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        if (result < 0) {
+            handleRestoreScriptError(result);
+        }
+    }
+
+    @Override
+    public void restoreStockIdempotently(
+            String eventId,
+            Long saleId,
+            Long userId,
+            int quantity
+    ) {
+        validateQuantity(quantity);
+
+        String stockKey = "sale:" + saleId + ":stock";
+        String userKey = "sale:" + saleId + ":user:" + userId;
+        String processedEventKey =
+                "stock-restore:processed:" + eventId;
+
+        Long result = redisTemplate.execute(
+                stockRestoreIdempotentScript,
+                List.of(
+                        stockKey,
+                        userKey,
+                        processedEventKey
+                ),
+                String.valueOf(quantity),
+                String.valueOf(86400)
         );
 
         if (result == null) {

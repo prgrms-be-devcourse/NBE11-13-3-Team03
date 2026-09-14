@@ -1,6 +1,7 @@
 package com.team3.gudit.purchase.service;
 
 import com.team3.gudit.global.exception.BusinessException;
+import com.team3.gudit.outbox.service.OutboxEventService;
 import com.team3.gudit.payment.entity.Payment;
 import com.team3.gudit.payment.service.PaymentService;
 import com.team3.gudit.purchase.dto.PurchaseCancelResponse;
@@ -38,11 +39,10 @@ public class PurchaseService {
     private final SaleRepository saleRepository;
     private final InventoryService inventoryService;
     private final PaymentService paymentService;
+    private final OutboxEventService outboxEventService;
 
     @Transactional
     public PurchaseCreateResponse purchase(Long userId, Long saleId) {
-
-
 
         if (purchaseRepository.existsByUserIdAndSaleIdAndStatusNot(
                 userId,
@@ -184,7 +184,8 @@ public class PurchaseService {
 
         purchase.cancel();
 
-        registerStockRestoreAfterCommit(
+        outboxEventService.saveStockRestoreRequested(
+                purchase.getId(),
                 purchase.getSale().getId(),
                 userId,
                 purchase.getQuantity()
@@ -202,42 +203,11 @@ public class PurchaseService {
 
         purchase.cancel();
 
-        registerStockRestoreAfterCommit(
+        outboxEventService.saveStockRestoreRequested(
+                purchase.getId(),
                 purchase.getSale().getId(),
                 userId,
                 purchase.getQuantity()
-        );
-    }
-
-    private void registerStockRestoreAfterCommit(
-            Long saleId,
-            Long userId,
-            int quantity
-    ) {
-        if (!TransactionSynchronizationManager
-                .isSynchronizationActive()) {
-
-            inventoryService.restoreStock(
-                    saleId,
-                    userId,
-                    quantity
-            );
-
-            return;
-        }
-
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-
-                    @Override
-                    public void afterCommit() {
-                        inventoryService.restoreStock(
-                                saleId,
-                                userId,
-                                quantity
-                        );
-                    }
-                }
         );
     }
 
