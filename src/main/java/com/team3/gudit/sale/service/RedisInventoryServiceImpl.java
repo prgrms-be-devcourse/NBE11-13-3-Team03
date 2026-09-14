@@ -2,6 +2,9 @@ package com.team3.gudit.sale.service;
 
 import com.team3.gudit.global.exception.BusinessException;
 import com.team3.gudit.global.exception.GlobalErrorCode;
+import com.team3.gudit.sale.domain.entity.Sale;
+import com.team3.gudit.sale.domain.repository.SaleRepository;
+import com.team3.gudit.sale.dto.SaleRedisDto;
 import com.team3.gudit.sale.exception.SaleErrorCode;
 import com.team3.gudit.sale.metrics.InventoryMetrics;
 import io.micrometer.core.instrument.Timer;
@@ -29,6 +32,8 @@ public class RedisInventoryServiceImpl implements InventoryService {
     private final StringRedisTemplate redisTemplate;
     private final DefaultRedisScript<Long> stockDecrementScript;
     private final DefaultRedisScript<Long> stockRestoreScript;
+    private final DefaultRedisScript<Long> stockRestoreIdempotentScript;
+    private final SaleRepository saleRepository;
     private final InventoryMetrics inventoryMetrics;
 
     @Override
@@ -171,6 +176,92 @@ public class RedisInventoryServiceImpl implements InventoryService {
             inventoryMetrics.recordLuaExecution(
                     sample,
                     "restore",
+                    luaResult
+            );
+        }
+    }
+
+    @Override
+    public void restoreStockIdempotently(
+            String eventId,
+            Long saleId,
+            Long userId,
+            int quantity
+    ) {
+        validateQuantity(quantity);
+
+        String stockKey = "sale:" + saleId + ":stock";
+        String userKey = "sale:" + saleId + ":user:" + userId;
+        String processedEventKey =
+                "stock-restore:processed:" + eventId;
+
+        Timer.Sample sample = inventoryMetrics.startLuaTimer();
+        String luaResult = "failed";
+
+        try {
+            Long result = redisTemplate.execute(
+                    stockRestoreIdempotentScript,
+                    List.of(
+                            stockKey,
+                            userKey,
+                            processedEventKey
+                    ),
+                    String.valueOf(quantity),
+                    String.valueOf(86400)
+            );
+
+            if (result == null) {
+                inventoryMetrics.recordRestore(
+                        "failed",
+                        "null_result"
+                );
+
+                throw new BusinessException(
+                        GlobalErrorCode.INTERNAL_SERVER_ERROR
+                );
+            }
+
+            if (result < 0) {
+                inventoryMetrics.recordRestore(
+                        "failed",
+                        "stock_not_found"
+                );
+
+                handleRestoreScriptError(result);
+            }
+
+            if (result == 0) {
+                luaResult = "rejected";
+
+                inventoryMetrics.recordRestore(
+                        "rejected",
+                        "already_restored"
+                );
+
+                return;
+            }
+
+            luaResult = "success";
+
+            inventoryMetrics.recordRestore(
+                    "success",
+                    "none"
+            );
+
+            inventoryMetrics.recordRestoredQuantity(result);
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            inventoryMetrics.recordRestore(
+                    "failed",
+                    "redis_error"
+            );
+
+            throw exception;
+        } finally {
+            inventoryMetrics.recordLuaExecution(
+                    sample,
+                    "restore_idempotent",
                     luaResult
             );
         }

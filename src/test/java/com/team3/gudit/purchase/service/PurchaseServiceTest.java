@@ -2,6 +2,7 @@ package com.team3.gudit.purchase.service;
 
 import com.team3.gudit.global.exception.BusinessException;
 import com.team3.gudit.goods.domain.entity.Goods;
+import com.team3.gudit.outbox.service.OutboxEventService;
 import com.team3.gudit.payment.entity.Payment;
 import com.team3.gudit.payment.entity.PaymentStatus;
 import com.team3.gudit.payment.service.PaymentService;
@@ -30,8 +31,13 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,6 +57,9 @@ class PurchaseServiceTest {
 
     @Mock
     private PaymentService paymentService;
+
+    @Mock
+    private OutboxEventService outboxEventService;
 
     @InjectMocks
     private PurchaseService purchaseService;
@@ -181,6 +190,14 @@ class PurchaseServiceTest {
                 .findByIdAndUserIdWithLock(
                         purchaseId,
                         userId
+                );
+
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        any(),
+                        anyLong(),
+                        anyLong(),
+                        anyInt()
                 );
     }
 
@@ -330,11 +347,19 @@ class PurchaseServiceTest {
                         purchaseId
                 );
 
-        verify(inventoryService)
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        isNull(),
+                        eq(saleId),
+                        eq(userId),
+                        eq(1)
+                );
+
+        verify(inventoryService, never())
                 .restoreStock(
-                        saleId,
-                        userId,
-                        1
+                        anyLong(),
+                        anyLong(),
+                        anyInt()
                 );
     }
 
@@ -396,11 +421,19 @@ class PurchaseServiceTest {
                         "payment-key"
                 );
 
-        verify(inventoryService)
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        isNull(),
+                        eq(saleId),
+                        eq(userId),
+                        eq(1)
+                );
+
+        verify(inventoryService, never())
                 .restoreStock(
-                        saleId,
-                        userId,
-                        1
+                        anyLong(),
+                        anyLong(),
+                        anyInt()
                 );
 
         assertThat(lockedPurchase.getStatus())

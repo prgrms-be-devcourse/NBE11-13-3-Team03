@@ -1,12 +1,12 @@
 package com.team3.gudit.purchase.service;
 
+import com.team3.gudit.outbox.service.OutboxEventService;
 import com.team3.gudit.payment.entity.Payment;
 import com.team3.gudit.payment.entity.PaymentStatus;
 import com.team3.gudit.payment.repository.PaymentRepository;
 import com.team3.gudit.purchase.entity.Purchase;
 import com.team3.gudit.purchase.entity.PurchaseStatus;
 import com.team3.gudit.purchase.repository.PurchaseRepository;
-import com.team3.gudit.sale.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,7 +19,7 @@ public class PurchaseTimeoutService {
 
     private final PurchaseRepository purchaseRepository;
     private final PaymentRepository paymentRepository;
-    private final InventoryService inventoryService;
+    private final OutboxEventService outboxEventService;
 
     /**
      * timeout 대상 Purchase 한 건을 독립된 트랜잭션으로 처리한다.
@@ -31,7 +31,8 @@ public class PurchaseTimeoutService {
     public boolean cancelExpiredPurchase(
             Long purchaseId
     ) {
-        // 사용자 취소, 결제 실패와의 동시 처리를 막기 위해 Purchase 한 건을 비관적 락으로 조회
+        // 사용자 취소, 결제 실패와의 동시 처리를 막기 위해
+        // Purchase 한 건을 비관적 락으로 조회
         Purchase lockedPurchase = purchaseRepository
                 .findByIdWithLock(purchaseId)
                 .orElse(null);
@@ -47,7 +48,8 @@ public class PurchaseTimeoutService {
             return false;
         }
 
-        // 목록 조회 이후 다른 요청이 처리했을 수 있으므로 잠금을 획득한 뒤 최신 상태를 다시 확인
+        // 목록 조회 이후 다른 요청이 처리했을 수 있으므로
+        // 잠금을 획득한 뒤 최신 상태를 다시 확인
         if (lockedPurchase.getStatus()
                 != PurchaseStatus.PENDING_PAYMENT) {
 
@@ -77,7 +79,8 @@ public class PurchaseTimeoutService {
             return false;
         }
 
-        // 아직 외부 결제가 시작되지 않은 READY Payment만 timeout으로 취소
+        // 아직 외부 결제가 시작되지 않은 READY Payment만
+        // timeout으로 취소한다.
         if (payment.getStatus() != PaymentStatus.READY) {
             log.info(
                     "[구매 timeout 처리 생략] "
@@ -90,17 +93,17 @@ public class PurchaseTimeoutService {
             return false;
         }
 
-        // 아래 처리는 한 트랜잭션에서 수행한다.
-        // restoreStock에서 예외가 발생하면 Payment 변경도 롤백된다.
+        // Payment/Purchase 상태 변경과 재고 복구 요청 저장을
+        // 동일한 DB Transaction에서 처리한다.
         payment.cancelReady();
+        lockedPurchase.cancel();
 
-        inventoryService.restoreStock(
+        outboxEventService.saveStockRestoreRequested(
+                lockedPurchase.getId(),
                 lockedPurchase.getSale().getId(),
                 lockedPurchase.getUser().getId(),
                 lockedPurchase.getQuantity()
         );
-
-        lockedPurchase.cancel();
 
         return true;
     }

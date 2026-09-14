@@ -44,6 +44,9 @@ class RedisInventoryServiceImplTest {
     private DefaultRedisScript<Long> stockRestoreScript;
 
     @Mock
+    private DefaultRedisScript<Long> stockRestoreIdempotentScript;
+
+    @Mock
     private SaleRepository saleRepository;
 
     private RedisInventoryServiceImpl inventoryService;
@@ -57,6 +60,8 @@ class RedisInventoryServiceImplTest {
                 redisTemplate,
                 stockDecrementScript,
                 stockRestoreScript,
+                stockRestoreIdempotentScript,
+                saleRepository,
                 inventoryMetrics
         );
     }
@@ -397,6 +402,137 @@ class RedisInventoryServiceImplTest {
                 eq(stockRestoreScript),
                 eq(keys),
                 any(Object[].class)
+        );
+    }
+
+    @Test
+    @DisplayName("멱등 재고 복구 시 eventId를 포함한 Key와 TTL을 Lua Script에 전달한다")
+    void restoreStockIdempotentlySuccess() {
+        // given
+        String eventId = "event-123";
+        Long saleId = 1L;
+        Long userId = 10L;
+        int quantity = 2;
+
+        List<String> expectedKeys = List.of(
+                "sale:1:stock",
+                "sale:1:user:10",
+                "stock-restore:processed:event-123"
+        );
+
+        given(redisTemplate.execute(
+                eq(stockRestoreIdempotentScript),
+                eq(expectedKeys),
+                any(Object[].class)
+        )).willReturn(2L);
+
+        // when & then
+        assertThatCode(() ->
+                inventoryService.restoreStockIdempotently(
+                        eventId,
+                        saleId,
+                        userId,
+                        quantity
+                )
+        ).doesNotThrowAnyException();
+
+        ArgumentCaptor<Object[]> argumentsCaptor =
+                ArgumentCaptor.forClass(Object[].class);
+
+        verify(redisTemplate).execute(
+                eq(stockRestoreIdempotentScript),
+                eq(expectedKeys),
+                argumentsCaptor.capture()
+        );
+
+        Object[] scriptArguments = argumentsCaptor.getValue();
+
+        assertThat(scriptArguments).containsExactly(
+                String.valueOf(quantity),
+                "86400"
+        );
+    }
+
+    @Test
+    @DisplayName("이미 처리한 eventId로 Lua 결과가 0이면 중복 복구 없이 정상 종료한다")
+    void restoreStockIdempotentlyAlreadyProcessed() {
+        // given
+        List<String> keys = List.of(
+                "sale:1:stock",
+                "sale:1:user:10",
+                "stock-restore:processed:event-123"
+        );
+
+        given(redisTemplate.execute(
+                eq(stockRestoreIdempotentScript),
+                eq(keys),
+                any(Object[].class)
+        )).willReturn(0L);
+
+        // when & then
+        assertThatCode(() ->
+                inventoryService.restoreStockIdempotently(
+                        "event-123",
+                        1L,
+                        10L,
+                        1
+                )
+        ).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("멱등 재고 복구 결과가 null이면 내부 서버 오류가 발생한다")
+    void restoreStockIdempotentlyNullResult() {
+        // given
+        List<String> keys = List.of(
+                "sale:1:stock",
+                "sale:1:user:10",
+                "stock-restore:processed:event-123"
+        );
+
+        given(redisTemplate.execute(
+                eq(stockRestoreIdempotentScript),
+                eq(keys),
+                any(Object[].class)
+        )).willReturn(null);
+
+        // when & then
+        assertBusinessError(
+                () -> inventoryService.restoreStockIdempotently(
+                        "event-123",
+                        1L,
+                        10L,
+                        1
+                ),
+                GlobalErrorCode.INTERNAL_SERVER_ERROR
+        );
+    }
+
+    @Test
+    @DisplayName("멱등 재고 복구 시 stock Key가 없으면 재고 정보 누락 예외가 발생한다")
+    void restoreStockIdempotentlyWithoutStockKey() {
+        // given
+        List<String> keys = List.of(
+                "sale:1:stock",
+                "sale:1:user:10",
+                "stock-restore:processed:event-123"
+        );
+
+        given(redisTemplate.execute(
+                eq(stockRestoreIdempotentScript),
+                eq(keys),
+                any(Object[].class)
+        )).willReturn(-1L);
+
+        // when & then
+        assertBusinessError(
+                () -> inventoryService.restoreStockIdempotently(
+                        "event-123",
+                        1L,
+                        10L,
+                        1
+                ),
+                SaleErrorCode.REDIS_STOCK_NOT_FOUND
         );
     }
 

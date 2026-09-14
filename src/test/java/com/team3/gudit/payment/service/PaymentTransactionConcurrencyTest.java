@@ -1,6 +1,7 @@
 package com.team3.gudit.payment.service;
 
 import com.team3.gudit.global.exception.BusinessException;
+import com.team3.gudit.outbox.service.OutboxEventService;
 import com.team3.gudit.payment.dto.TossPaymentResponse;
 import com.team3.gudit.payment.entity.Payment;
 import com.team3.gudit.payment.entity.PaymentStatus;
@@ -10,7 +11,6 @@ import com.team3.gudit.purchase.entity.PurchaseStatus;
 import com.team3.gudit.purchase.exception.PurchaseErrorCode;
 import com.team3.gudit.purchase.repository.PurchaseRepository;
 import com.team3.gudit.sale.domain.entity.Sale;
-import com.team3.gudit.sale.service.InventoryService;
 import com.team3.gudit.user.domain.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,10 +34,10 @@ class PaymentTransactionConcurrencyTest {
     private PaymentRepository paymentRepository;
 
     @Mock
-    private InventoryService inventoryService;
+    private PurchaseRepository purchaseRepository;
 
     @Mock
-    private PurchaseRepository purchaseRepository;
+    private OutboxEventService outboxEventService;
 
     private PaymentTransactionService paymentTransactionService;
 
@@ -50,8 +50,8 @@ class PaymentTransactionConcurrencyTest {
         paymentTransactionService =
                 new PaymentTransactionService(
                         paymentRepository,
-                        inventoryService,
-                        purchaseRepository
+                        purchaseRepository,
+                        outboxEventService
                 );
 
         purchaseId = 100L;
@@ -107,6 +107,7 @@ class PaymentTransactionConcurrencyTest {
 
         assertThat(payment.getStatus())
                 .isEqualTo(PaymentStatus.IN_PROGRESS);
+
         assertThat(payment.getPaymentKey())
                 .isEqualTo(paymentKey);
     }
@@ -224,8 +225,6 @@ class PaymentTransactionConcurrencyTest {
 
         verify(lockedPurchase).complete();
 
-        // Payment가 가리키던 기존 객체가 아니라
-        // 잠금 조회한 Purchase를 변경했는지 확인
         verify(paymentPurchase, never()).complete();
 
         assertThat(payment.getStatus())
@@ -233,7 +232,7 @@ class PaymentTransactionConcurrencyTest {
     }
 
     @Test
-    @DisplayName("결제 실패 시 PENDING_PAYMENT Purchase만 Redis 재고를 복구하고 취소한다")
+    @DisplayName("결제 실패 시 PENDING_PAYMENT Purchase만 취소하고 재고 복구 Outbox 이벤트를 저장한다")
     void failPaymentWithPendingPurchase() {
         // given
         Purchase paymentPurchase = mock(Purchase.class);
@@ -244,17 +243,24 @@ class PaymentTransactionConcurrencyTest {
         given(paymentPurchase.getId())
                 .willReturn(purchaseId);
 
+        given(lockedPurchase.getId())
+                .willReturn(purchaseId);
+
         given(lockedPurchase.getStatus())
                 .willReturn(PurchaseStatus.PENDING_PAYMENT);
+
         given(lockedPurchase.getSale())
                 .willReturn(sale);
+
         given(lockedPurchase.getUser())
                 .willReturn(user);
+
         given(lockedPurchase.getQuantity())
                 .willReturn(1);
 
         given(sale.getId())
                 .willReturn(saleId);
+
         given(user.getId())
                 .willReturn(userId);
 
@@ -281,18 +287,20 @@ class PaymentTransactionConcurrencyTest {
         assertThat(payment.getStatus())
                 .isEqualTo(PaymentStatus.FAILED);
 
-        verify(inventoryService).restoreStock(
-                saleId,
-                userId,
-                1
-        );
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
+                        saleId,
+                        userId,
+                        1
+                );
 
         verify(lockedPurchase).cancel();
         verify(paymentPurchase, never()).cancel();
     }
 
     @Test
-    @DisplayName("결제 실패 시 Purchase가 이미 CANCELED이면 Redis 재고를 중복 복구하지 않는다")
+    @DisplayName("결제 실패 시 Purchase가 이미 CANCELED이면 재고 복구 Outbox 이벤트를 중복 저장하지 않는다")
     void failPaymentWhenPurchaseAlreadyCanceled() {
         // given
         Purchase paymentPurchase = mock(Purchase.class);
@@ -327,8 +335,9 @@ class PaymentTransactionConcurrencyTest {
         assertThat(payment.getStatus())
                 .isEqualTo(PaymentStatus.FAILED);
 
-        verify(inventoryService, never())
-                .restoreStock(
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        anyLong(),
                         anyLong(),
                         anyLong(),
                         anyInt()
@@ -338,7 +347,7 @@ class PaymentTransactionConcurrencyTest {
     }
 
     @Test
-    @DisplayName("승인 실패 보상 시 Purchase가 이미 CANCELED이면 Redis 재고를 중복 복구하지 않는다")
+    @DisplayName("승인 실패 보상 시 Purchase가 이미 CANCELED이면 재고 복구 Outbox 이벤트를 중복 저장하지 않는다")
     void compensateApprovalFailureWhenPurchaseAlreadyCanceled() {
         // given
         Purchase paymentPurchase = mock(Purchase.class);
@@ -374,8 +383,9 @@ class PaymentTransactionConcurrencyTest {
         assertThat(payment.getStatus())
                 .isEqualTo(PaymentStatus.CANCELED);
 
-        verify(inventoryService, never())
-                .restoreStock(
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        anyLong(),
                         anyLong(),
                         anyLong(),
                         anyInt()

@@ -1,6 +1,7 @@
 package com.team3.gudit.purchase.service;
 
 import com.team3.gudit.global.exception.BusinessException;
+import com.team3.gudit.outbox.service.OutboxEventService;
 import com.team3.gudit.payment.entity.Payment;
 import com.team3.gudit.payment.entity.PaymentStatus;
 import com.team3.gudit.payment.exception.PaymentErrorCode;
@@ -48,6 +49,9 @@ class PurchaseServiceRedisCompensationTest {
     @Mock
     private PaymentService paymentService;
 
+    @Mock
+    private OutboxEventService outboxEventService;
+
     private PurchaseService purchaseService;
 
     @Mock
@@ -65,7 +69,8 @@ class PurchaseServiceRedisCompensationTest {
                 saleRepository,
                 inventoryService,
                 paymentService,
-                inventoryMetrics
+                inventoryMetrics,
+                outboxEventService
         );
 
         userId = 1L;
@@ -74,7 +79,7 @@ class PurchaseServiceRedisCompensationTest {
     }
 
     @Test
-    @DisplayName("PENDING_PAYMENT 구매 취소 시 잠금 조회 후 READY 결제를 취소하고 Redis 재고를 복구한다")
+    @DisplayName("PENDING_PAYMENT 구매 취소 시 결제를 취소하고 재고 복구 Outbox 이벤트를 저장한다")
     void cancelPendingPayment() {
         // given
         Purchase purchase = mock(Purchase.class);
@@ -85,8 +90,6 @@ class PurchaseServiceRedisCompensationTest {
                 userId
         )).willReturn(Optional.of(purchase));
 
-        // 취소 전에는 PENDING_PAYMENT,
-        // 취소 응답을 만들 때는 CANCELED 상태를 반환
         given(purchase.getStatus())
                 .willReturn(
                         PurchaseStatus.PENDING_PAYMENT,
@@ -139,11 +142,19 @@ class PurchaseServiceRedisCompensationTest {
         assertThat(payment.getStatus())
                 .isEqualTo(PaymentStatus.CANCELED);
 
-        verify(inventoryService)
-                .restoreStock(
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
                         saleId,
                         userId,
                         1
+                );
+
+        verify(inventoryService, never())
+                .restoreStock(
+                        anyLong(),
+                        anyLong(),
+                        anyInt()
                 );
 
         verify(purchase).cancel();
@@ -153,7 +164,7 @@ class PurchaseServiceRedisCompensationTest {
     }
 
     @Test
-    @DisplayName("Payment가 IN_PROGRESS이면 사용자 취소와 Redis 재고 복구를 차단한다")
+    @DisplayName("Payment가 IN_PROGRESS이면 사용자 취소와 재고 복구 Outbox 저장을 차단한다")
     void cancelPendingPaymentWhenPaymentInProgress() {
         // given
         Purchase purchase = mock(Purchase.class);
@@ -208,6 +219,14 @@ class PurchaseServiceRedisCompensationTest {
                         purchaseId
                 );
 
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        anyLong(),
+                        anyLong(),
+                        anyLong(),
+                        anyInt()
+                );
+
         verify(inventoryService, never())
                 .restoreStock(
                         anyLong(),
@@ -219,7 +238,7 @@ class PurchaseServiceRedisCompensationTest {
     }
 
     @Test
-    @DisplayName("이미 취소된 Purchase는 다시 취소하거나 Redis 재고를 복구하지 않는다")
+    @DisplayName("이미 취소된 Purchase는 다시 취소하거나 재고 복구 Outbox 이벤트를 저장하지 않는다")
     void cancelAlreadyCanceledPurchase() {
         // given
         Purchase purchase = mock(Purchase.class);
@@ -260,6 +279,14 @@ class PurchaseServiceRedisCompensationTest {
                         purchaseId
                 );
 
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        anyLong(),
+                        anyLong(),
+                        anyLong(),
+                        anyInt()
+                );
+
         verify(inventoryService, never())
                 .restoreStock(
                         anyLong(),
@@ -271,7 +298,7 @@ class PurchaseServiceRedisCompensationTest {
     }
 
     @Test
-    @DisplayName("판매 종료 후 1일이 지나면 사용자 취소와 Redis 재고 복구를 차단한다")
+    @DisplayName("판매 종료 후 1일이 지나면 사용자 취소와 재고 복구 Outbox 저장을 차단한다")
     void cancelAfterCancellationDeadline() {
         // given
         Purchase purchase = mock(Purchase.class);
@@ -318,6 +345,14 @@ class PurchaseServiceRedisCompensationTest {
                         purchaseId
                 );
 
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        anyLong(),
+                        anyLong(),
+                        anyLong(),
+                        anyInt()
+                );
+
         verify(inventoryService, never())
                 .restoreStock(
                         anyLong(),
@@ -329,7 +364,7 @@ class PurchaseServiceRedisCompensationTest {
     }
 
     @Test
-    @DisplayName("취소 유예기간 안의 PURCHASED 구매는 결제 취소 후 Redis 재고를 복구한다")
+    @DisplayName("취소 유예기간 안의 PURCHASED 구매는 결제 취소 후 재고 복구 Outbox 이벤트를 저장한다")
     void cancelPurchasedWithinCancellationPeriod() {
         // given
         Purchase purchase = mock(Purchase.class);
@@ -377,11 +412,19 @@ class PurchaseServiceRedisCompensationTest {
         verify(paymentService)
                 .cancelCompletedPayment("payment-key");
 
-        verify(inventoryService)
-                .restoreStock(
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
                         saleId,
                         userId,
                         1
+                );
+
+        verify(inventoryService, never())
+                .restoreStock(
+                        anyLong(),
+                        anyLong(),
+                        anyInt()
                 );
 
         verify(purchase).cancel();

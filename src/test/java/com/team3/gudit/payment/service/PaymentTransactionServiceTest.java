@@ -1,6 +1,7 @@
 package com.team3.gudit.payment.service;
 
 import com.team3.gudit.global.exception.BusinessException;
+import com.team3.gudit.outbox.service.OutboxEventService;
 import com.team3.gudit.payment.dto.TossPaymentResponse;
 import com.team3.gudit.payment.entity.Payment;
 import com.team3.gudit.payment.entity.PaymentStatus;
@@ -10,7 +11,6 @@ import com.team3.gudit.purchase.entity.Purchase;
 import com.team3.gudit.purchase.entity.PurchaseStatus;
 import com.team3.gudit.purchase.repository.PurchaseRepository;
 import com.team3.gudit.sale.domain.entity.Sale;
-import com.team3.gudit.sale.service.InventoryService;
 import com.team3.gudit.user.domain.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,7 +34,7 @@ class PaymentTransactionServiceTest {
     private PaymentRepository paymentRepository;
 
     @Mock
-    private InventoryService inventoryService;
+    private OutboxEventService outboxEventService;
 
     @Mock
     private PurchaseRepository purchaseRepository;
@@ -328,7 +328,7 @@ class PaymentTransactionServiceTest {
     }
 
     @Test
-    @DisplayName("결제 실패 시 잠근 구매가 PENDING_PAYMENT이면 재고를 복구하고 취소한다")
+    @DisplayName("결제 실패 시 잠근 구매가 PENDING_PAYMENT이면 취소하고 재고 복구 Outbox 이벤트를 저장한다")
     void failPayment() {
         // given
         Long purchaseId = 100L;
@@ -384,15 +384,20 @@ class PaymentTransactionServiceTest {
         verify(purchaseRepository)
                 .findByIdWithLock(purchaseId);
 
-        verify(inventoryService)
-                .restoreStock(10L, 1L, 1);
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
+                        10L,
+                        1L,
+                        1
+                );
 
         verify(purchase)
                 .cancel();
     }
 
     @Test
-    @DisplayName("승인 후 처리 실패 보상 시 잠근 구매의 재고를 복구하고 취소한다")
+    @DisplayName("승인 후 처리 실패 보상 시 잠근 구매를 취소하고 재고 복구 Outbox 이벤트를 저장한다")
     void compensateApprovalFailure() {
         // given
         Long purchaseId = 100L;
@@ -449,8 +454,13 @@ class PaymentTransactionServiceTest {
         verify(purchaseRepository)
                 .findByIdWithLock(purchaseId);
 
-        verify(inventoryService)
-                .restoreStock(10L, 1L, 1);
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
+                        10L,
+                        1L,
+                        1
+                );
 
         verify(purchase)
                 .cancel();
@@ -604,7 +614,7 @@ class PaymentTransactionServiceTest {
     }
 
     @Test
-    @DisplayName("CANCELED Webhook 보정 시 결제와 구매를 취소하고 재고를 복구한다")
+    @DisplayName("CANCELED Webhook 보정 시 결제와 구매를 취소하고 재고 복구 Outbox 이벤트를 저장한다")
     void reconcileCanceled() {
         // given
         Long purchaseId = 100L;
@@ -665,12 +675,17 @@ class PaymentTransactionServiceTest {
         verify(purchase)
                 .cancel();
 
-        verify(inventoryService)
-                .restoreStock(10L, 1L, 1);
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
+                        10L,
+                        1L,
+                        1
+                );
     }
 
     @Test
-    @DisplayName("ABORTED Webhook 보정 시 결제를 실패 처리하고 구매와 재고를 복구한다")
+    @DisplayName("ABORTED Webhook 보정 시 결제를 실패 처리하고 구매 취소와 재고 복구 Outbox 이벤트를 저장한다")
     void reconcileAborted() {
         // given
         Long purchaseId = 100L;
@@ -731,12 +746,17 @@ class PaymentTransactionServiceTest {
         verify(purchase)
                 .cancel();
 
-        verify(inventoryService)
-                .restoreStock(10L, 1L, 1);
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
+                        10L,
+                        1L,
+                        1
+                );
     }
 
     @Test
-    @DisplayName("EXPIRED Webhook 보정 시 결제와 구매를 취소하고 재고를 복구한다")
+    @DisplayName("EXPIRED Webhook 보정 시 결제와 구매를 취소하고 재고 복구 Outbox 이벤트를 저장한다")
     void reconcileExpired() {
         // given
         Long purchaseId = 100L;
@@ -797,8 +817,13 @@ class PaymentTransactionServiceTest {
         verify(purchase)
                 .cancel();
 
-        verify(inventoryService)
-                .restoreStock(10L, 1L, 1);
+        verify(outboxEventService)
+                .saveStockRestoreRequested(
+                        purchaseId,
+                        10L,
+                        1L,
+                        1
+                );
     }
 
     @Test
@@ -843,8 +868,9 @@ class PaymentTransactionServiceTest {
         assertThat(payment.getStatus())
                 .isEqualTo(PaymentStatus.CANCELED);
 
-        verify(inventoryService, never())
-                .restoreStock(
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        anyLong(),
                         anyLong(),
                         anyLong(),
                         anyInt()
@@ -896,8 +922,9 @@ class PaymentTransactionServiceTest {
         assertThat(payment.getStatus())
                 .isEqualTo(PaymentStatus.FAILED);
 
-        verify(inventoryService, never())
-                .restoreStock(
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        anyLong(),
                         anyLong(),
                         anyLong(),
                         anyInt()
@@ -957,11 +984,88 @@ class PaymentTransactionServiceTest {
         verify(purchase, never())
                 .complete();
 
-        verify(inventoryService, never())
-                .restoreStock(
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        anyLong(),
                         anyLong(),
                         anyLong(),
                         anyInt()
+                );
+    }
+
+    @Test
+    @DisplayName("이미 CANCELED인 결제의 승인 실패 보상을 다시 처리해도 재고 복구 Outbox를 중복 저장하지 않는다")
+    void compensateApprovalFailureAlreadyCanceled() {
+        // given
+        Long purchaseId = 100L;
+
+        Purchase purchase = mock(Purchase.class);
+
+        Payment payment = Payment.create(
+                purchase,
+                15_000
+        );
+
+        payment.start("payment-key");
+        payment.cancelAfterApprovalFailure();
+
+        given(purchase.getId())
+                .willReturn(purchaseId);
+
+        given(paymentRepository.findByPaymentKey("payment-key"))
+                .willReturn(Optional.of(payment));
+
+        given(purchaseRepository.findByIdWithLock(purchaseId))
+                .willReturn(Optional.of(purchase));
+
+        // when
+        paymentTransactionService.compensateApprovalFailure(
+                "payment-key"
+        );
+
+        // then
+        assertThat(payment.getStatus())
+                .isEqualTo(PaymentStatus.CANCELED);
+
+        verify(purchase, never())
+                .cancel();
+
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        anyLong(),
+                        anyLong(),
+                        anyLong(),
+                        anyInt()
+                );
+    }
+
+    @Test
+    @DisplayName("결제 보상 재처리 요청 시 PAYMENT_COMPENSATION_REQUIRED Outbox 이벤트를 저장한다")
+    void requestPaymentCompensation() {
+        // given
+        Purchase purchase = mock(Purchase.class);
+
+        Payment payment = Payment.create(
+                purchase,
+                15_000
+        );
+
+        payment.start("payment-key");
+
+        given(paymentRepository.findByPaymentKey("payment-key"))
+                .willReturn(Optional.of(payment));
+
+        // when
+        paymentTransactionService.requestPaymentCompensation(
+                "payment-key"
+        );
+
+        // then
+        verify(outboxEventService)
+                .savePaymentCompensationRequired(
+                        null,
+                        payment.getOrderId(),
+                        "payment-key"
                 );
     }
 }
