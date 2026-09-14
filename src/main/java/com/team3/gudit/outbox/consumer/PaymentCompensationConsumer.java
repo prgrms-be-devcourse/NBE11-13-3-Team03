@@ -1,9 +1,11 @@
 package com.team3.gudit.outbox.consumer;
 
 import com.team3.gudit.outbox.dto.PaymentCompensationEventPayload;
+import com.team3.gudit.outbox.metrics.RedisStreamMetrics;
 import com.team3.gudit.payment.dto.TossPaymentResponse;
 import com.team3.gudit.payment.service.PaymentService;
 import com.team3.gudit.payment.service.PaymentTransactionService;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -37,6 +39,7 @@ public class PaymentCompensationConsumer {
     private final ObjectMapper objectMapper;
     private final PaymentService paymentService;
     private final PaymentTransactionService paymentTransactionService;
+    private final RedisStreamMetrics redisStreamMetrics;
 
     @Scheduled(fixedDelay = 1000)
     public void consume() {
@@ -100,6 +103,7 @@ public class PaymentCompensationConsumer {
             }
 
             for (MapRecord<String, Object, Object> record : claimedRecords) {
+                redisStreamMetrics.recordPaymentCompensationRetry();
                 processRecord(record);
             }
         }
@@ -112,6 +116,11 @@ public class PaymentCompensationConsumer {
 
         String traceId = getValue(values, "traceId");
         String payload = getValue(values, "payload");
+
+        Timer.Sample sample =
+                redisStreamMetrics.startConsumerProcessingTimer();
+
+        String processingResult = "failed";
 
         try {
             if (traceId != null && !traceId.isBlank()) {
@@ -133,13 +142,29 @@ public class PaymentCompensationConsumer {
                             record.getId()
                     );
 
+            redisStreamMetrics.recordPaymentCompensationSuccess();
+
+            processingResult = "success";
+
         } catch (RuntimeException e) {
+            redisStreamMetrics
+                    .recordPaymentCompensationProcessingFailure();
+
+            redisStreamMetrics
+                    .recordPaymentCompensationFailure();
+
             log.warn(
                     "Payment compensation processing failed. recordId={}",
                     record.getId(),
                     e
             );
         } finally {
+            redisStreamMetrics.recordConsumerProcessingTime(
+                    sample,
+                    "payment_compensation",
+                    processingResult
+            );
+
             MDC.remove("traceId");
         }
     }

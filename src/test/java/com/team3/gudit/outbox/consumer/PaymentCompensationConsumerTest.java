@@ -1,5 +1,6 @@
 package com.team3.gudit.outbox.consumer;
 
+import com.team3.gudit.outbox.metrics.RedisStreamMetrics;
 import com.team3.gudit.payment.dto.TossPaymentResponse;
 import com.team3.gudit.payment.service.PaymentService;
 import com.team3.gudit.payment.service.PaymentTransactionService;
@@ -44,6 +45,9 @@ class PaymentCompensationConsumerTest {
     @Mock
     private PaymentTransactionService paymentTransactionService;
 
+    @Mock
+    private RedisStreamMetrics redisStreamMetrics;
+
     private ObjectMapper objectMapper;
 
     private PaymentCompensationConsumer consumer;
@@ -56,7 +60,8 @@ class PaymentCompensationConsumerTest {
                 stringRedisTemplate,
                 objectMapper,
                 paymentService,
-                paymentTransactionService
+                paymentTransactionService,
+                redisStreamMetrics
         );
 
         when(stringRedisTemplate.opsForStream())

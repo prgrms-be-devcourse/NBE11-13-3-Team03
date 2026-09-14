@@ -291,3 +291,270 @@ groups:
             receiver: Gudit Slack Alerts
             group_wait: 10s
             group_interval: 1m
+
+        - uid: gudit_outbox_publish_delay
+          title: Outbox Publishing Delayed
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                  max by (environment) (
+                    gudit_outbox_oldest_pending_age_seconds{
+                      job="gudit"
+                    }
+                  )
+                instant: true
+                intervalMs: 1000
+                legendFormat: "{{environment}}"
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                  - evaluator:
+                      params:
+                        - 30
+                      type: gt
+                    operator:
+                      type: and
+                    query:
+                      params:
+                        - C
+                    reducer:
+                      params: []
+                      type: last
+                    type: query
+                datasource:
+                  type: __expr__
+                  uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 10s
+          annotations:
+            summary: Gudit Outbox 이벤트 발행이 지연되고 있습니다.
+            description: 가장 오래된 PENDING Outbox 이벤트의 대기시간이 30초를 초과했습니다. Redis 연결과 Outbox Publisher 상태를 확인해야 합니다.
+          labels:
+            component: outbox
+            service: gudit
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m
+
+        - uid: gudit_stream_pending_stuck
+          title: Redis Stream Pending Stuck
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                  max by (environment, stream) (
+                    gudit_redis_stream_pending_count{
+                      job="gudit"
+                    }
+                  )
+                instant: true
+                intervalMs: 1000
+                legendFormat: "{{stream}}"
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                  - evaluator:
+                      params:
+                        - 0
+                      type: gt
+                    operator:
+                      type: and
+                    query:
+                      params:
+                        - C
+                    reducer:
+                      params: [ ]
+                      type: last
+                    type: query
+                datasource:
+                  type: __expr__
+                  uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 1m
+          annotations:
+            summary: Gudit Redis Stream 메시지 처리가 정체되었습니다.
+            description: Redis Stream 메시지가 Consumer에게 전달된 후 1분 이상 ACK되지 않고 있습니다. stream 라벨과 Consumer 실패 로그를 확인해야 합니다.
+          labels:
+            component: redis-stream
+            service: gudit
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m
+
+        - uid: gudit_stream_consumer_failures
+          title: Repeated Redis Stream Consumer Failures
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                  round(
+                    sum by (environment, stream) (
+                      increase(
+                        gudit_redis_stream_consumer_processing_failure_total{
+                          job="gudit"
+                        }[5m]
+                      )
+                    )
+                  )
+                instant: true
+                intervalMs: 1000
+                legendFormat: "{{stream}}"
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                  - evaluator:
+                      params:
+                        - 2
+                      type: gt
+                    operator:
+                      type: and
+                    query:
+                      params:
+                        - C
+                    reducer:
+                      params: [ ]
+                      type: last
+                    type: query
+                datasource:
+                  type: __expr__
+                  uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 10s
+          annotations:
+            summary: Gudit Redis Stream Consumer에서 반복적인 처리 실패가 발생했습니다.
+            description: 최근 5분 동안 Redis Stream Consumer 처리 실패가 3회 이상 발생했습니다. stream 라벨과 동일한 traceId의 Loki 로그를 확인해야 합니다.
+          labels:
+            component: redis-stream
+            service: gudit
+            severity: warning
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m
+
+        - uid: gudit_payment_comp_failure
+          title: Payment Compensation Failure
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                  sum by (environment) (
+                    increase(
+                      gudit_payment_compensation_total{
+                        job="gudit",
+                        result="failed"
+                      }[5m]
+                    )
+                  )
+                instant: true
+                intervalMs: 1000
+                legendFormat: "{{environment}}"
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                  - evaluator:
+                      params:
+                        - 0
+                      type: gt
+                    operator:
+                      type: and
+                    query:
+                      params:
+                        - C
+                    reducer:
+                      params: [ ]
+                      type: last
+                    type: query
+                datasource:
+                  type: __expr__
+                  uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 10s
+          annotations:
+            summary: Gudit 결제 보상 처리에 실패했습니다.
+            description: 최근 5분 동안 결제 보상 처리 실패가 발생했습니다. 결제 상태와 DB 상태의 정합성 및 동일한 traceId의 Loki 로그를 확인해야 합니다.
+          labels:
+            component: payment-compensation
+            service: gudit
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m
