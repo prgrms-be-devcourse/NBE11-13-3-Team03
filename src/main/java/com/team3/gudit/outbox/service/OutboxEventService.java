@@ -1,5 +1,6 @@
 package com.team3.gudit.outbox.service;
 
+import com.team3.gudit.outbox.dto.PaymentCompensationEventPayload;
 import com.team3.gudit.outbox.dto.StockRestoreEventPayload;
 import com.team3.gudit.outbox.entity.OutboxEvent;
 import com.team3.gudit.outbox.entity.OutboxEventType;
@@ -22,12 +23,13 @@ public class OutboxEventService {
             Long userId,
             int quantity
     ) {
-        StockRestoreEventPayload payload = new StockRestoreEventPayload(
-                purchaseId,
-                saleId,
-                userId,
-                quantity
-        );
+        StockRestoreEventPayload payload =
+                new StockRestoreEventPayload(
+                        purchaseId,
+                        saleId,
+                        userId,
+                        quantity
+                );
 
         OutboxEvent event = OutboxEvent.create(
                 MDC.get("traceId"),
@@ -38,7 +40,28 @@ public class OutboxEventService {
         outboxEventRepository.save(event);
     }
 
-    private String serialize(StockRestoreEventPayload payload) {
+    public void savePaymentCompensationRequired(
+            Long paymentId,
+            String orderId,
+            String paymentKey
+    ) {
+        PaymentCompensationEventPayload payload =
+                new PaymentCompensationEventPayload(
+                        paymentId,
+                        orderId,
+                        paymentKey
+                );
+
+        OutboxEvent event = OutboxEvent.create(
+                MDC.get("traceId"),
+                OutboxEventType.PAYMENT_COMPENSATION_REQUIRED,
+                serialize(payload)
+        );
+
+        outboxEventRepository.save(event);
+    }
+
+    private String serialize(Object payload) {
         return objectMapper.writeValueAsString(payload);
     }
 }

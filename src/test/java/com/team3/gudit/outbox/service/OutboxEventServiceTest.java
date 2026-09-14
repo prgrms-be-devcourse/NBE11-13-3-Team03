@@ -1,5 +1,6 @@
 package com.team3.gudit.outbox.service;
 
+import com.team3.gudit.outbox.dto.PaymentCompensationEventPayload;
 import com.team3.gudit.outbox.entity.OutboxEvent;
 import com.team3.gudit.outbox.entity.OutboxEventStatus;
 import com.team3.gudit.outbox.entity.OutboxEventType;
@@ -24,13 +25,17 @@ class OutboxEventServiceTest {
     @Mock
     private OutboxEventRepository outboxEventRepository;
 
+    private ObjectMapper objectMapper;
+
     private OutboxEventService outboxEventService;
 
     @BeforeEach
     void setUp() {
+        objectMapper = new ObjectMapper();
+
         outboxEventService = new OutboxEventService(
                 outboxEventRepository,
-                new ObjectMapper()
+                objectMapper
         );
     }
 
@@ -110,5 +115,56 @@ class OutboxEventServiceTest {
                 .isEqualTo(OutboxEventType.STOCK_RESTORE_REQUESTED);
         assertThat(savedEvent.getStatus())
                 .isEqualTo(OutboxEventStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("결제 보상 재처리 요청을 PAYMENT_COMPENSATION_REQUIRED Outbox 이벤트로 저장한다")
+    void savePaymentCompensationRequired() {
+        // given
+        Long paymentId = 1L;
+        String orderId = "order-1";
+        String paymentKey = "payment-key-1";
+
+        // when
+        outboxEventService.savePaymentCompensationRequired(
+                paymentId,
+                orderId,
+                paymentKey
+        );
+
+        // then
+        ArgumentCaptor<OutboxEvent> captor =
+                ArgumentCaptor.forClass(OutboxEvent.class);
+
+        verify(outboxEventRepository)
+                .save(captor.capture());
+
+        OutboxEvent savedEvent = captor.getValue();
+
+        assertThat(savedEvent.getEventType())
+                .isEqualTo(
+                        OutboxEventType.PAYMENT_COMPENSATION_REQUIRED
+                );
+
+        assertThat(savedEvent.getStatus())
+                .isEqualTo(OutboxEventStatus.PENDING);
+
+        assertThat(savedEvent.getEventId())
+                .isNotNull();
+
+        PaymentCompensationEventPayload payload =
+                objectMapper.readValue(
+                        savedEvent.getPayload(),
+                        PaymentCompensationEventPayload.class
+                );
+
+        assertThat(payload.paymentId())
+                .isEqualTo(paymentId);
+
+        assertThat(payload.orderId())
+                .isEqualTo(orderId);
+
+        assertThat(payload.paymentKey())
+                .isEqualTo(paymentKey);
     }
 }

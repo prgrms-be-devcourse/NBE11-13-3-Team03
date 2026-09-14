@@ -992,4 +992,80 @@ class PaymentTransactionServiceTest {
                         anyInt()
                 );
     }
+
+    @Test
+    @DisplayName("이미 CANCELED인 결제의 승인 실패 보상을 다시 처리해도 재고 복구 Outbox를 중복 저장하지 않는다")
+    void compensateApprovalFailureAlreadyCanceled() {
+        // given
+        Long purchaseId = 100L;
+
+        Purchase purchase = mock(Purchase.class);
+
+        Payment payment = Payment.create(
+                purchase,
+                15_000
+        );
+
+        payment.start("payment-key");
+        payment.cancelAfterApprovalFailure();
+
+        given(purchase.getId())
+                .willReturn(purchaseId);
+
+        given(paymentRepository.findByPaymentKey("payment-key"))
+                .willReturn(Optional.of(payment));
+
+        given(purchaseRepository.findByIdWithLock(purchaseId))
+                .willReturn(Optional.of(purchase));
+
+        // when
+        paymentTransactionService.compensateApprovalFailure(
+                "payment-key"
+        );
+
+        // then
+        assertThat(payment.getStatus())
+                .isEqualTo(PaymentStatus.CANCELED);
+
+        verify(purchase, never())
+                .cancel();
+
+        verify(outboxEventService, never())
+                .saveStockRestoreRequested(
+                        anyLong(),
+                        anyLong(),
+                        anyLong(),
+                        anyInt()
+                );
+    }
+
+    @Test
+    @DisplayName("결제 보상 재처리 요청 시 PAYMENT_COMPENSATION_REQUIRED Outbox 이벤트를 저장한다")
+    void requestPaymentCompensation() {
+        // given
+        Purchase purchase = mock(Purchase.class);
+
+        Payment payment = Payment.create(
+                purchase,
+                15_000
+        );
+
+        payment.start("payment-key");
+
+        given(paymentRepository.findByPaymentKey("payment-key"))
+                .willReturn(Optional.of(payment));
+
+        // when
+        paymentTransactionService.requestPaymentCompensation(
+                "payment-key"
+        );
+
+        // then
+        verify(outboxEventService)
+                .savePaymentCompensationRequired(
+                        null,
+                        payment.getOrderId(),
+                        "payment-key"
+                );
+    }
 }

@@ -20,6 +20,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -185,5 +186,68 @@ class OutboxPublisherTest {
 
         verify(streamOperations, times(2))
                 .add(any(MapRecord.class));
+    }
+
+    @Test
+    @DisplayName("PAYMENT_COMPENSATION_REQUIRED 이벤트는 결제 보상 Stream으로 발행한다")
+    void publishPaymentCompensationEvent() {
+        // given
+        OutboxEvent event = OutboxEvent.create(
+                "trace-123",
+                OutboxEventType.PAYMENT_COMPENSATION_REQUIRED,
+                """
+                {
+                  "paymentId":1,
+                  "orderId":"order-1",
+                  "paymentKey":"payment-key-1"
+                }
+                """
+        );
+
+        given(outboxEventRepository.findAllByStatusOrderByCreatedAtAsc(
+                OutboxEventStatus.PENDING
+        )).willReturn(List.of(event));
+
+        given(stringRedisTemplate.opsForStream())
+                .willReturn(streamOperations);
+
+        given(streamOperations.add(any(MapRecord.class)))
+                .willReturn(RecordId.of("1-0"));
+
+        // when
+        outboxPublisher.publishPendingEvents();
+
+        // then
+        @SuppressWarnings("rawtypes")
+        ArgumentCaptor<MapRecord> recordCaptor =
+                ArgumentCaptor.forClass(MapRecord.class);
+
+        verify(streamOperations)
+                .add(recordCaptor.capture());
+
+        @SuppressWarnings("unchecked")
+        MapRecord<String, String, String> publishedRecord =
+                (MapRecord<String, String, String>) recordCaptor.getValue();
+
+        assertThat(publishedRecord.getStream())
+                .isEqualTo(
+                        PaymentCompensationStreamConstants
+                                .PAYMENT_COMPENSATION_STREAM
+                );
+
+        assertThat(
+                publishedRecord.getValue().get("eventType")
+        ).isEqualTo(
+                "PAYMENT_COMPENSATION_REQUIRED"
+        );
+
+        assertThat(
+                publishedRecord.getValue().get("traceId")
+        ).isEqualTo(
+                "trace-123"
+        );
+
+        assertThat(event.getStatus())
+                .isEqualTo(OutboxEventStatus.PUBLISHED);
     }
 }
