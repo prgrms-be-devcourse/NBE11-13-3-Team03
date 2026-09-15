@@ -1,5 +1,6 @@
 package com.team3.gudit.payment.service;
 
+import com.team3.gudit.cs.dto.CsPaymentStatusResponse;
 import com.team3.gudit.global.exception.BusinessException;
 import com.team3.gudit.payment.client.TossPaymentClient;
 import com.team3.gudit.payment.dto.*;
@@ -646,7 +647,7 @@ class PaymentServiceTest {
                 .willReturn(PurchaseStatus.PURCHASED);
 
         // when
-        PaymentCsStatusResponse response =
+        CsPaymentStatusResponse response =
                 paymentService.getCsStatus(orderId);
 
         // then

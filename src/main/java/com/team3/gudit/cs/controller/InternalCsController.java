@@ -1,6 +1,6 @@
-package com.team3.gudit.payment.controller;
+package com.team3.gudit.cs.controller;
 
-import com.team3.gudit.payment.dto.PaymentCsStatusResponse;
+import com.team3.gudit.cs.dto.CsPaymentStatusResponse;
 import com.team3.gudit.payment.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/internal/payments")
 @RequiredArgsConstructor
-public class InternalPaymentController {
+public class InternalCsController {
 
     private final PaymentService paymentService;
 
@@ -41,10 +41,10 @@ public class InternalPaymentController {
             )
     })
     @GetMapping("/{orderId}/cs-status")
-    public ResponseEntity<PaymentCsStatusResponse> getCsStatus(
+    public ResponseEntity<CsPaymentStatusResponse> getCsStatus(
             @PathVariable String orderId
     ) {
-        PaymentCsStatusResponse response =
+        CsPaymentStatusResponse response =
                 paymentService.getCsStatus(orderId);
 
         return ResponseEntity.ok(response);
