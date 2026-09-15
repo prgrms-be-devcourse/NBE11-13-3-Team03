@@ -63,10 +63,10 @@ class UserServiceTest {
                 userService.getMyInfo(userId);
 
         // then
-        assertThat(result.id()).isEqualTo(1L);
-        assertThat(result.nickname()).isEqualTo("테스트유저");
-        assertThat(result.email()).isEqualTo("test@test.com");
-        assertThat(result.role()).isEqualTo(Role.USER);
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getNickname()).isEqualTo("테스트유저");
+        assertThat(result.getEmail()).isEqualTo("test@test.com");
+        assertThat(result.getRole()).isEqualTo(Role.USER);
 
         verify(userRepository).findById(userId);
     }

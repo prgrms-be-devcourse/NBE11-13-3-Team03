@@ -60,16 +60,16 @@ class UserControllerTest {
         assertThat(response.getBody())
                 .isNotNull();
 
-        assertThat(response.getBody().id())
+        assertThat(response.getBody().getId())
                 .isEqualTo(userId);
 
-        assertThat(response.getBody().nickname())
+        assertThat(response.getBody().getNickname())
                 .isEqualTo("테스트유저");
 
-        assertThat(response.getBody().email())
+        assertThat(response.getBody().getEmail())
                 .isEqualTo("test@test.com");
 
-        assertThat(response.getBody().role())
+        assertThat(response.getBody().getRole())
                 .isEqualTo(Role.USER);
 
         verify(userService)
