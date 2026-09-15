@@ -52,7 +52,11 @@ if stock < quantity then
 end
 
 -- 5. 차감 및 유저 구매 수량 갱신 (원자적 처리)
-redis.call('DECRBY', stockKey, quantity)
+local remainingStock = redis.call(
+        'DECRBY',
+        stockKey,
+        quantity
+)
 redis.call('INCRBY', userKey, quantity)
 
 -- 유저 Key 자동 삭제를 위한 TTL 부여 (판매 종료 시점 + 1일)
@@ -61,5 +65,6 @@ local USER_KEY_BUFFER_MILLIS = 86400000
 local userKeyExpireAt = endAt + USER_KEY_BUFFER_MILLIS
 redis.call('PEXPIREAT', userKey, userKeyExpireAt)
 
--- 성공 시 1 반환 (Java 단에서 성공 판별용)
-return 1
+-- 성공 시 차감 후 남은 재고 반환
+-- 0이면 이번 차감으로 품절된 것
+return remainingStock

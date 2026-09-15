@@ -44,6 +44,12 @@ spring:
       ddl-auto: create
     defer-datasource-initialization: true
 
+  task:
+    scheduling:
+      pool:
+        size: 8
+      thread-name-prefix: gudit-scheduling-
+
   sql:
     init:
       mode: always
@@ -65,3 +71,25 @@ toss:
 
 springdoc:
   show-actuator: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: ${METRICS_ENVIRONMENT:local}
+
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+logging:
+  file:
+    name: ${LOG_FILE_PATH:logs/gudit.log}
+
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [traceId=%X{traceId:-no-trace}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [traceId=%X{traceId:-no-trace}] %logger{36} - %msg%n"

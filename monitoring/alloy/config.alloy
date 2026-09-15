@@ -1,0 +1,24 @@
+loki.source.file "gudit_application" {
+  targets = [
+    {
+      "__path__"    = "/var/log/gudit/*.log",
+      "job"         = "gudit-application",
+      "application" = "Gudit",
+      "environment" = sys.env("LOG_ENVIRONMENT"),
+    },
+  ]
+
+  forward_to   = [loki.write.local.receiver]
+  tail_from_end = false
+
+  file_match {
+    enabled     = true
+    sync_period = "5s"
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

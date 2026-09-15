@@ -1,0 +1,560 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: gudit-observability
+      folder: Gudit Alerts
+      interval: 10s
+      rules:
+        - uid: ffxzb5swzrq4gd
+          title: Spring Boot Instance Down
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: up{job="gudit"}
+                instant: true
+                intervalMs: 1000
+                legendFormat: Service
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 1
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 30s
+          annotations:
+            description: Prometheus의 up{job="gudit"} 값이 30초 이상 0으로 감지되었습니다.
+            summary: Gudit Spring Boot 인스턴스가 중단되었습니다.
+          labels:
+            environment: performance
+            service: gudit
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_interval: 1m
+        - uid: dfxzcf5tdpw5ce
+          title: High HTTP 5xx Error Rate
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                    100 *
+                    (
+                      (
+                        sum(
+                          rate(
+                            http_server_requests_seconds_count{
+                              job="gudit",
+                              status=~"5..",
+                              uri!="/actuator/prometheus"
+                            }[1m]
+                          )
+                        )
+                        or vector(0)
+                      )
+                      /
+                      clamp_min(
+                        (
+                          sum(
+                            rate(
+                              http_server_requests_seconds_count{
+                                job="gudit",
+                                uri!="/actuator/prometheus"
+                              }[1m]
+                            )
+                          )
+                          or vector(0)
+                        ),
+                        0.001
+                      )
+                    )
+                instant: true
+                intervalMs: 1000
+                legendFormat: 5xx 오류율
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 5
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 10s
+          keepFiringFor: 30s
+          annotations:
+            description: 최근 1분간 HTTP 5xx 오류율이 5%를 초과한 상태가 30초 이상 지속되었습니다.
+            summary: Gudit HTTP 5xx 오류율이 높습니다.
+          labels:
+            environment: performance
+            service: gudit
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m
+        - uid: bfxzdsbs4l81sd
+          title: High HTTP Response Time p95
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                    histogram_quantile(
+                      0.95,
+                      sum by (le) (
+                        rate(
+                          http_server_requests_seconds_bucket{
+                            job="gudit",
+                            uri!="/actuator/prometheus"
+                          }[1m]
+                        )
+                      )
+                    ) * 1000
+                instant: true
+                intervalMs: 1000
+                legendFormat: HTTP Response Time p95
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 500
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 30s
+          annotations:
+            description: 최근 1분간 HTTP 응답시간 p95가 500ms를 초과한 상태가 30초 이상 지속되었습니다.
+            summary: Gudit HTTP p95 응답시간이 높습니다.
+          labels:
+            environment: performance
+            service: gudit
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m
+        - uid: ffxzmvqjpl1j4c
+          title: Stock Rollback Failure
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                    sum(
+                      increase(
+                        gudit_inventory_stock_rollback_total{
+                          environment="performance",
+                          result="failed"
+                        }[5m]
+                      )
+                    )
+                    or vector(0)
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          annotations:
+            description: 최근 5분 동안 재고 롤백 실패가 발생했습니다. 데이터 정합성을 확인해야 합니다.
+            summary: 재고 롤백에 실패했습니다.
+          labels:
+            component: inventory
+            environment: performance
+            service: gudit
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m
+
+        - uid: gudit_outbox_publish_delay
+          title: Outbox Publishing Delayed
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                  max by (environment) (
+                    gudit_outbox_oldest_pending_age_seconds{
+                      job="gudit"
+                    }
+                  )
+                instant: true
+                intervalMs: 1000
+                legendFormat: "{{environment}}"
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                  - evaluator:
+                      params:
+                        - 30
+                      type: gt
+                    operator:
+                      type: and
+                    query:
+                      params:
+                        - C
+                    reducer:
+                      params: []
+                      type: last
+                    type: query
+                datasource:
+                  type: __expr__
+                  uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: KeepLast
+          execErrState: Error
+          for: 10s
+          annotations:
+            summary: Gudit Outbox 이벤트 발행이 지연되고 있습니다.
+            description: 가장 오래된 PENDING Outbox 이벤트의 대기시간이 30초를 초과했습니다. Redis 연결과 Outbox Publisher 상태를 확인해야 합니다.
+          labels:
+            component: outbox
+            service: gudit
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m
+
+        - uid: gudit_stream_pending_stuck
+          title: Redis Stream Pending Stuck
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                  max by (environment, stream) (
+                    gudit_redis_stream_pending_max_idle_seconds{
+                      job="gudit"
+                    }
+                  )
+                instant: true
+                intervalMs: 1000
+                legendFormat: "{{stream}}"
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                  - evaluator:
+                      params:
+                        - 60
+                      type: gt
+                    operator:
+                      type: and
+                    query:
+                      params:
+                        - C
+                    reducer:
+                      params: [ ]
+                      type: last
+                    type: query
+                datasource:
+                  type: __expr__
+                  uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 10s
+          annotations:
+            summary: Gudit Redis Stream Pending 메시지가 장시간 처리되지 않고 있습니다.
+            description: Redis Stream Pending 메시지의 최대 idle 시간이 60초를 초과했습니다. stream 라벨과 Consumer 상태 및 실패 로그를 확인해야 합니다.
+          labels:
+            component: redis-stream
+            service: gudit
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m
+
+        - uid: gudit_stream_consumer_failures
+          title: Repeated Redis Stream Consumer Failures
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                  round(
+                    sum by (environment, stream) (
+                      increase(
+                        gudit_redis_stream_consumer_processing_failure_total{
+                          job="gudit"
+                        }[5m]
+                      )
+                    )
+                  )
+                instant: true
+                intervalMs: 1000
+                legendFormat: "{{stream}}"
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                  - evaluator:
+                      params:
+                        - 2
+                      type: gt
+                    operator:
+                      type: and
+                    query:
+                      params:
+                        - C
+                    reducer:
+                      params: [ ]
+                      type: last
+                    type: query
+                datasource:
+                  type: __expr__
+                  uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 10s
+          annotations:
+            summary: Gudit Redis Stream Consumer에서 반복적인 처리 실패가 발생했습니다.
+            description: 최근 5분 동안 Redis Stream Consumer 처리 실패가 3회 이상 발생했습니다. stream 라벨과 동일한 traceId의 Loki 로그를 확인해야 합니다.
+          labels:
+            component: redis-stream
+            service: gudit
+            severity: warning
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m
+
+        - uid: gudit_payment_comp_failure
+          title: Payment Compensation Failure
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: bfxxwhawkfv9ce
+              model:
+                editorMode: code
+                expr: |-
+                  sum by (environment) (
+                    increase(
+                      gudit_payment_compensation_total{
+                        job="gudit",
+                        result="failed"
+                      }[5m]
+                    )
+                  )
+                instant: true
+                intervalMs: 1000
+                legendFormat: "{{environment}}"
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                  - evaluator:
+                      params:
+                        - 0
+                      type: gt
+                    operator:
+                      type: and
+                    query:
+                      params:
+                        - C
+                    reducer:
+                      params: [ ]
+                      type: last
+                    type: query
+                datasource:
+                  type: __expr__
+                  uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 10s
+          annotations:
+            summary: Gudit 결제 보상 처리에 실패했습니다.
+            description: 최근 5분 동안 결제 보상 처리 실패가 발생했습니다. 결제 상태와 DB 상태의 정합성 및 동일한 traceId의 Loki 로그를 확인해야 합니다.
+          labels:
+            component: payment-compensation
+            service: gudit
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: Gudit Slack Alerts
+            group_wait: 10s
+            group_interval: 1m

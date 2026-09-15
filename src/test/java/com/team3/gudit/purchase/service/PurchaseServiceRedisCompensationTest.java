@@ -13,6 +13,7 @@ import com.team3.gudit.purchase.exception.PurchaseErrorCode;
 import com.team3.gudit.purchase.repository.PurchaseRepository;
 import com.team3.gudit.sale.domain.entity.Sale;
 import com.team3.gudit.sale.domain.repository.SaleRepository;
+import com.team3.gudit.sale.metrics.InventoryMetrics;
 import com.team3.gudit.sale.service.InventoryService;
 import com.team3.gudit.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +54,9 @@ class PurchaseServiceRedisCompensationTest {
 
     private PurchaseService purchaseService;
 
+    @Mock
+    private InventoryMetrics inventoryMetrics;
+
     private Long userId;
     private Long saleId;
     private Long purchaseId;
@@ -65,6 +69,7 @@ class PurchaseServiceRedisCompensationTest {
                 saleRepository,
                 inventoryService,
                 paymentService,
+                inventoryMetrics,
                 outboxEventService
         );
 

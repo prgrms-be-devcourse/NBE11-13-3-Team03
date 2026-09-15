@@ -52,6 +52,7 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")    // JWT 구현체
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0") // JSON 처리를 위한 Jackson 모듈
     runtimeOnly("org.postgresql:postgresql")
+    runtimeOnly ("io.micrometer:micrometer-registry-prometheus")
 
     annotationProcessor("org.projectlombok:lombok")
 

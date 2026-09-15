@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "gudit"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets:
+          - "host.docker.internal:8080"
+
+  - job_name: "redis-local"
+    static_configs:
+      - targets:
+          - "redis-exporter-local:9121"
+        labels:
+          environment: "local"
+
+  - job_name: "redis-performance"
+    static_configs:
+      - targets:
+          - "redis-exporter-performance:9121"
+        labels:
+          environment: "performance"

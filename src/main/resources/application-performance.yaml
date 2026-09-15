@@ -22,3 +22,9 @@ gudit:
   inventory:
     # redis: Redis Lua 원자 연산(기본값), db-pessimistic: DB SELECT FOR UPDATE
     mode: ${GUDIT_INVENTORY_MODE:redis}
+
+# performance 프로필 실행 시 메트릭에 environment="performance" 라벨 추가
+management:
+  metrics:
+    tags:
+      environment: performance

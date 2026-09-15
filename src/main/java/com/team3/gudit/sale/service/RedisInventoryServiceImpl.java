@@ -6,6 +6,8 @@ import com.team3.gudit.sale.domain.entity.Sale;
 import com.team3.gudit.sale.domain.repository.SaleRepository;
 import com.team3.gudit.sale.dto.SaleRedisDto;
 import com.team3.gudit.sale.exception.SaleErrorCode;
+import com.team3.gudit.sale.metrics.InventoryMetrics;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
@@ -32,6 +34,7 @@ public class RedisInventoryServiceImpl implements InventoryService {
     private final DefaultRedisScript<Long> stockRestoreScript;
     private final DefaultRedisScript<Long> stockRestoreIdempotentScript;
     private final SaleRepository saleRepository;
+    private final InventoryMetrics inventoryMetrics;
 
     @Override
     public void decreaseStock(Long saleId, Long userId, int quantity) {
@@ -43,19 +46,64 @@ public class RedisInventoryServiceImpl implements InventoryService {
 
         long nowMilli = Instant.now().toEpochMilli();
 
-        Long result = redisTemplate.execute(
-                stockDecrementScript,
-                List.of(stockKey, infoKey, userKey),
-                String.valueOf(quantity),
-                String.valueOf(nowMilli)
-        );
+        Timer.Sample sample = inventoryMetrics.startLuaTimer();
+        String luaResult = "failed";
 
-        if (result == null) {
-            throw new BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
-        }
+        try {
+            Long result = redisTemplate.execute(
+                    stockDecrementScript,
+                    List.of(stockKey, infoKey, userKey),
+                    String.valueOf(quantity),
+                    String.valueOf(nowMilli)
+            );
 
-        if (result < 0) {
-            handleScriptError(result);
+            if (result == null) {
+                inventoryMetrics.recordDecrease(
+                        "failed",
+                        "null_result"
+                );
+
+                throw new BusinessException(
+                        GlobalErrorCode.INTERNAL_SERVER_ERROR
+                );
+            }
+
+            if (result < 0) {
+                luaResult = "rejected";
+
+                inventoryMetrics.recordDecrease(
+                        "rejected",
+                        getDecreaseFailureReason(result)
+                );
+
+                handleScriptError(result);
+            }
+
+            luaResult = "success";
+
+            inventoryMetrics.recordDecrease(
+                    "success",
+                    "none"
+            );
+
+            if (result == 0) {
+                inventoryMetrics.recordSoldOut();
+            }
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            inventoryMetrics.recordDecrease(
+                    "failed",
+                    "redis_error"
+            );
+
+            throw exception;
+        } finally {
+            inventoryMetrics.recordLuaExecution(
+                    sample,
+                    "decrement",
+                    luaResult
+            );
         }
     }
 
@@ -66,20 +114,70 @@ public class RedisInventoryServiceImpl implements InventoryService {
         String stockKey = "sale:" + saleId + ":stock";
         String userKey = "sale:" + saleId + ":user:" + userId;
 
-        Long result = redisTemplate.execute(
-                stockRestoreScript,
-                List.of(stockKey, userKey),
-                String.valueOf(quantity)
-        );
+        Timer.Sample sample = inventoryMetrics.startLuaTimer();
+        String luaResult = "failed";
 
-        if (result == null) {
-            throw new BusinessException(
-                    GlobalErrorCode.INTERNAL_SERVER_ERROR
+        try {
+            Long result = redisTemplate.execute(
+                    stockRestoreScript,
+                    List.of(stockKey, userKey),
+                    String.valueOf(quantity)
             );
-        }
 
-        if (result < 0) {
-            handleRestoreScriptError(result);
+            if (result == null) {
+                inventoryMetrics.recordRestore(
+                        "failed",
+                        "null_result"
+                );
+
+                throw new BusinessException(
+                        GlobalErrorCode.INTERNAL_SERVER_ERROR
+                );
+            }
+
+            if (result < 0) {
+                inventoryMetrics.recordRestore(
+                        "failed",
+                        "stock_not_found"
+                );
+
+                handleRestoreScriptError(result);
+            }
+
+            if (result == 0) {
+                luaResult = "rejected";
+
+                inventoryMetrics.recordRestore(
+                        "rejected",
+                        "already_restored"
+                );
+
+                return;
+            }
+
+            luaResult = "success";
+
+            inventoryMetrics.recordRestore(
+                    "success",
+                    "none"
+            );
+
+            inventoryMetrics.recordRestoredQuantity(result);
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            inventoryMetrics.recordRestore(
+                    "failed",
+                    "redis_error"
+            );
+
+            throw exception;
+        } finally {
+            inventoryMetrics.recordLuaExecution(
+                    sample,
+                    "restore",
+                    luaResult
+            );
         }
     }
 
@@ -97,26 +195,96 @@ public class RedisInventoryServiceImpl implements InventoryService {
         String processedEventKey =
                 "stock-restore:processed:" + eventId;
 
-        Long result = redisTemplate.execute(
-                stockRestoreIdempotentScript,
-                List.of(
-                        stockKey,
-                        userKey,
-                        processedEventKey
-                ),
-                String.valueOf(quantity),
-                String.valueOf(86400)
-        );
+        Timer.Sample sample = inventoryMetrics.startLuaTimer();
+        String luaResult = "failed";
 
-        if (result == null) {
-            throw new BusinessException(
-                    GlobalErrorCode.INTERNAL_SERVER_ERROR
+        try {
+            Long result = redisTemplate.execute(
+                    stockRestoreIdempotentScript,
+                    List.of(
+                            stockKey,
+                            userKey,
+                            processedEventKey
+                    ),
+                    String.valueOf(quantity),
+                    String.valueOf(86400)
+            );
+
+            if (result == null) {
+                inventoryMetrics.recordRestore(
+                        "failed",
+                        "null_result"
+                );
+
+                throw new BusinessException(
+                        GlobalErrorCode.INTERNAL_SERVER_ERROR
+                );
+            }
+
+            if (result < 0) {
+                inventoryMetrics.recordRestore(
+                        "failed",
+                        "stock_not_found"
+                );
+
+                handleRestoreScriptError(result);
+            }
+
+            if (result == 0) {
+                luaResult = "rejected";
+
+                inventoryMetrics.recordRestore(
+                        "rejected",
+                        "already_restored"
+                );
+
+                return;
+            }
+
+            luaResult = "success";
+
+            inventoryMetrics.recordRestore(
+                    "success",
+                    "none"
+            );
+
+            inventoryMetrics.recordRestoredQuantity(result);
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            inventoryMetrics.recordRestore(
+                    "failed",
+                    "redis_error"
+            );
+
+            throw exception;
+        } finally {
+            inventoryMetrics.recordLuaExecution(
+                    sample,
+                    "restore_idempotent",
+                    luaResult
             );
         }
+    }
 
-        if (result < 0) {
-            handleRestoreScriptError(result);
+    private String getDecreaseFailureReason(long errorCode) {
+        if (errorCode == -1) {
+            return "not_enough_stock";
         }
+
+        if (errorCode == -2) {
+            return "invalid_sale_period";
+        }
+
+        if (errorCode == -3) {
+            return "exceeded_purchase_quantity";
+        }
+
+        if (errorCode == -4) {
+            return "sale_closed";
+        }
+
+        return "unknown";
     }
 
     // 비즈니스 에러 처리 (-1: 재고부족, -2: 기간아님, -3: 수량초과, -4: 종료)

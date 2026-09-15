@@ -1,7 +1,9 @@
 package com.team3.gudit.outbox.consumer;
 
 import com.team3.gudit.outbox.dto.StockRestoreEventPayload;
+import com.team3.gudit.outbox.metrics.RedisStreamMetrics;
 import com.team3.gudit.sale.service.InventoryService;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -28,6 +30,7 @@ public class StockRestoreConsumer {
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
     private final InventoryService inventoryService;
+    private final RedisStreamMetrics redisStreamMetrics;
 
     @Scheduled(fixedDelay = 1000)
     public void consume() {
@@ -90,6 +93,7 @@ public class StockRestoreConsumer {
             }
 
             for (MapRecord<String, Object, Object> record : claimedRecords) {
+                redisStreamMetrics.recordStockRestoreRetry();
                 processRecord(streamOperations, record);
             }
         }
@@ -102,6 +106,11 @@ public class StockRestoreConsumer {
         String eventId = getValue(record, "eventId");
         String traceId = getValue(record, "traceId");
         String payload = getValue(record, "payload");
+
+        Timer.Sample sample =
+                redisStreamMetrics.startConsumerProcessingTimer();
+
+        String processingResult = "failed";
 
         try {
             if (traceId != null && !traceId.isBlank()) {
@@ -127,6 +136,8 @@ public class StockRestoreConsumer {
                     record.getId()
             );
 
+            processingResult = "success";
+
             log.info(
                     "Redis Stream 재고 복구 처리 완료. eventId={}, purchaseId={}, saleId={}, userId={}, quantity={}",
                     eventId,
@@ -136,6 +147,8 @@ public class StockRestoreConsumer {
                     eventPayload.quantity()
             );
         } catch (RuntimeException e) {
+            redisStreamMetrics.recordStockRestoreProcessingFailure();
+
             log.warn(
                     "Redis Stream 재고 복구 처리 실패. eventId={}, recordId={}",
                     eventId,
@@ -143,6 +156,12 @@ public class StockRestoreConsumer {
                     e
             );
         } finally {
+            redisStreamMetrics.recordConsumerProcessingTime(
+                    sample,
+                    "stock_restore",
+                    processingResult
+            );
+
             MDC.remove("traceId");
         }
     }

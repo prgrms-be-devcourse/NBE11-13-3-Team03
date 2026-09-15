@@ -1,5 +1,6 @@
 package com.team3.gudit.outbox.consumer;
 
+import com.team3.gudit.outbox.metrics.RedisStreamMetrics;
 import com.team3.gudit.sale.service.InventoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +36,9 @@ class StockRestoreConsumerTest {
     @Mock
     private InventoryService inventoryService;
 
+    @Mock
+    private RedisStreamMetrics redisStreamMetrics;
+
     private ObjectMapper objectMapper;
     private StockRestoreConsumer stockRestoreConsumer;
 
@@ -45,7 +49,8 @@ class StockRestoreConsumerTest {
         stockRestoreConsumer = new StockRestoreConsumer(
                 stringRedisTemplate,
                 objectMapper,
-                inventoryService
+                inventoryService,
+                redisStreamMetrics
         );
 
         MDC.clear();
