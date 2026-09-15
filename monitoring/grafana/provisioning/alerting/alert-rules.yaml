@@ -341,7 +341,7 @@ groups:
                 maxDataPoints: 43200
                 refId: C
                 type: threshold
-          noDataState: KeepLastState
+          noDataState: KeepLast
           execErrState: Error
           for: 10s
           annotations:
@@ -370,7 +370,7 @@ groups:
                 editorMode: code
                 expr: |-
                   max by (environment, stream) (
-                    gudit_redis_stream_pending_count{
+                    gudit_redis_stream_pending_max_idle_seconds{
                       job="gudit"
                     }
                   )
@@ -387,7 +387,7 @@ groups:
                 conditions:
                   - evaluator:
                       params:
-                        - 0
+                        - 60
                       type: gt
                     operator:
                       type: and
@@ -408,10 +408,10 @@ groups:
                 type: threshold
           noDataState: OK
           execErrState: Error
-          for: 1m
+          for: 10s
           annotations:
-            summary: Gudit Redis Stream 메시지 처리가 정체되었습니다.
-            description: Redis Stream 메시지가 Consumer에게 전달된 후 1분 이상 ACK되지 않고 있습니다. stream 라벨과 Consumer 실패 로그를 확인해야 합니다.
+            summary: Gudit Redis Stream Pending 메시지가 장시간 처리되지 않고 있습니다.
+            description: Redis Stream Pending 메시지의 최대 idle 시간이 60초를 초과했습니다. stream 라벨과 Consumer 상태 및 실패 로그를 확인해야 합니다.
           labels:
             component: redis-stream
             service: gudit

@@ -33,6 +33,9 @@ public class RedisStreamMetrics {
     private final MeterRegistry meterRegistry;
     private final AtomicLong stockRestoreConsumerLag = new AtomicLong();
     private final AtomicLong paymentCompensationConsumerLag = new AtomicLong();
+    private static final long PENDING_INSPECTION_LIMIT = 1000;
+    private final AtomicLong stockRestoreMaxPendingIdleSeconds = new AtomicLong();
+    private final AtomicLong paymentCompensationMaxPendingIdleSeconds = new AtomicLong();
 
     public RedisStreamMetrics(
             StringRedisTemplate redisTemplate,
@@ -126,6 +129,18 @@ public class RedisStreamMetrics {
                 paymentCompensationConsumerLag,
                 "payment_compensation"
         );
+
+        registerPendingMaxIdleGauge(
+                meterRegistry,
+                stockRestoreMaxPendingIdleSeconds,
+                "stock_restore"
+        );
+
+        registerPendingMaxIdleGauge(
+                meterRegistry,
+                paymentCompensationMaxPendingIdleSeconds,
+                "payment_compensation"
+        );
     }
 
     private void registerPendingGauge(
@@ -173,6 +188,20 @@ public class RedisStreamMetrics {
 
         paymentCompensationConsumerLag.set(
                 getConsumerLag(
+                        PAYMENT_COMPENSATION_STREAM,
+                        PAYMENT_COMPENSATION_GROUP
+                )
+        );
+
+        stockRestoreMaxPendingIdleSeconds.set(
+                getMaxPendingIdleSeconds(
+                        STOCK_RESTORE_STREAM,
+                        STOCK_RESTORE_GROUP
+                )
+        );
+
+        paymentCompensationMaxPendingIdleSeconds.set(
+                getMaxPendingIdleSeconds(
                         PAYMENT_COMPENSATION_STREAM,
                         PAYMENT_COMPENSATION_GROUP
                 )
@@ -299,5 +328,54 @@ public class RedisStreamMetrics {
         }
 
         return Long.parseLong(lag.toString());
+    }
+
+    private void registerPendingMaxIdleGauge(
+            MeterRegistry meterRegistry,
+            AtomicLong value,
+            String stream
+    ) {
+        Gauge.builder(
+                        "gudit.redis.stream.pending.max.idle.seconds",
+                        value,
+                        AtomicLong::get
+                )
+                .description(
+                        "Maximum idle time of pending Redis Stream messages"
+                )
+                .tag("stream", stream)
+                .register(meterRegistry);
+    }
+
+    private long getMaxPendingIdleSeconds(
+            String stream,
+            String group
+    ) {
+        var pendingMessages = redisTemplate.opsForStream()
+                .pending(
+                        stream,
+                        group,
+                        org.springframework.data.domain.Range.unbounded(),
+                        PENDING_INSPECTION_LIMIT
+                );
+
+        if (pendingMessages == null || pendingMessages.isEmpty()) {
+            return 0L;
+        }
+
+        long maxIdleSeconds = 0L;
+
+        for (var pendingMessage : pendingMessages) {
+            long idleSeconds = pendingMessage
+                    .getElapsedTimeSinceLastDelivery()
+                    .toSeconds();
+
+            maxIdleSeconds = Math.max(
+                    maxIdleSeconds,
+                    idleSeconds
+            );
+        }
+
+        return maxIdleSeconds;
     }
 }

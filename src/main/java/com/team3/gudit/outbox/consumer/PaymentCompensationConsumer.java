@@ -133,7 +133,14 @@ public class PaymentCompensationConsumer {
                             PaymentCompensationEventPayload.class
                     );
 
-            compensate(eventPayload);
+            try {
+                compensate(eventPayload);
+
+            } catch (RuntimeException e) {
+                redisStreamMetrics.recordPaymentCompensationFailure();
+                throw e;
+            }
+            redisStreamMetrics.recordPaymentCompensationSuccess();
 
             stringRedisTemplate.opsForStream()
                     .acknowledge(
@@ -142,16 +149,11 @@ public class PaymentCompensationConsumer {
                             record.getId()
                     );
 
-            redisStreamMetrics.recordPaymentCompensationSuccess();
-
             processingResult = "success";
 
         } catch (RuntimeException e) {
             redisStreamMetrics
                     .recordPaymentCompensationProcessingFailure();
-
-            redisStreamMetrics
-                    .recordPaymentCompensationFailure();
 
             log.warn(
                     "Payment compensation processing failed. recordId={}",

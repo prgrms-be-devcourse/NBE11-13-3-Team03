@@ -429,4 +429,59 @@ class PaymentCompensationConsumerTest {
                         )
                 );
     }
+
+    @Test
+    void 결제_보상은_성공했지만_ACK가_실패하면_결제보상실패로_집계하지_않는다() {
+        // given
+        String paymentKey = "payment-key-1";
+
+        MapRecord<String, Object, Object> record =
+                createRecord(
+                        """
+                        {
+                          "paymentId":1,
+                          "orderId":"order-1",
+                          "paymentKey":"payment-key-1"
+                        }
+                        """
+                );
+
+        TossPaymentResponse response =
+                new TossPaymentResponse(
+                        paymentKey,
+                        "order-1",
+                        "CANCELED",
+                        10000,
+                        OffsetDateTime.now()
+                );
+
+        mockRead(record);
+
+        when(paymentService.getPayment(paymentKey))
+                .thenReturn(response);
+
+        doThrow(new RuntimeException("Redis ACK 실패"))
+                .when(streamOperations)
+                .acknowledge(
+                        eq(PAYMENT_COMPENSATION_STREAM),
+                        eq(PAYMENT_COMPENSATION_GROUP),
+                        eq(record.getId())
+                );
+
+        // when
+        consumer.consume();
+
+        // then
+        verify(paymentTransactionService)
+                .compensateApprovalFailure(paymentKey);
+
+        verify(redisStreamMetrics)
+                .recordPaymentCompensationSuccess();
+
+        verify(redisStreamMetrics, never())
+                .recordPaymentCompensationFailure();
+
+        verify(redisStreamMetrics)
+                .recordPaymentCompensationProcessingFailure();
+    }
 }
