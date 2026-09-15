@@ -35,11 +35,7 @@ class UserServiceTest {
     @BeforeEach
     void setUp() {
 
-        user = User.builder()
-                .nickname("테스트유저")
-                .email("test@test.com")
-                .role(Role.USER)
-                .build();
+        user = new User(null, null, "테스트유저", "test@test.com", Role.USER, com.team3.gudit.auth.oauth2.AuthProvider.KAKAO, null, null);
 
         ReflectionTestUtils.setField(
                 user,

@@ -73,13 +73,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 })
                 .orElseGet(() -> {
 
-                    User newUser = User.builder()
-                            .kakaoId(userInfo.id())
-                            .nickname(userInfo.name())
-                            .email(userInfo.email())
-                            .role(isAdmin(userInfo.id()) ? Role.ADMIN : Role.USER)
-                            .provider(provider)
-                            .build();
+                    User newUser = new User(null, userInfo.id(), userInfo.name(), userInfo.email(), isAdmin(userInfo.id()) ? Role.ADMIN : Role.USER, provider, null, null);
 
                     return userRepository.save(newUser);
                 });
