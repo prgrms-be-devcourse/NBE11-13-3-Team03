@@ -341,7 +341,7 @@ groups:
                 maxDataPoints: 43200
                 refId: C
                 type: threshold
-          noDataState: OK
+          noDataState: KeepLastState
           execErrState: Error
           for: 10s
           annotations:

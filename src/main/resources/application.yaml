@@ -44,6 +44,12 @@ spring:
       ddl-auto: create
     defer-datasource-initialization: true
 
+  task:
+    scheduling:
+      pool:
+        size: 8
+      thread-name-prefix: gudit-scheduling-
+
   sql:
     init:
       mode: always

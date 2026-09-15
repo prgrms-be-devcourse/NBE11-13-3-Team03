@@ -7,8 +7,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Component
@@ -52,17 +50,11 @@ public class OutboxMetrics {
 
         pendingCount.set(count);
 
-        long oldestAge = outboxEventRepository
-                .findFirstByStatusOrderByCreatedAtAsc(
-                        OutboxEventStatus.PENDING
-                )
-                .map(event -> Duration.between(
-                        event.getCreatedAt(),
-                        LocalDateTime.now()
-                ).getSeconds())
-                .map(age -> Math.max(age, 0L))
-                .orElse(0L);
+        long oldestAge =
+                outboxEventRepository.findOldestPendingAgeSeconds();
 
-        oldestPendingAgeSeconds.set(oldestAge);
+        oldestPendingAgeSeconds.set(
+                Math.max(oldestAge, 0L)
+        );
     }
 }
