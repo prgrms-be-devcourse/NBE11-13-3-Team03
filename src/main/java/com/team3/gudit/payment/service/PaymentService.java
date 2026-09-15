@@ -3,6 +3,7 @@ package com.team3.gudit.payment.service;
 import com.team3.gudit.global.exception.BusinessException;
 import com.team3.gudit.payment.client.TossPaymentClient;
 import com.team3.gudit.payment.dto.PaymentConfirmRequest;
+import com.team3.gudit.cs.dto.CsPaymentStatusResponse;
 import com.team3.gudit.payment.dto.TossPaymentCancelRequest;
 import com.team3.gudit.payment.dto.TossPaymentConfirmRequest;
 import com.team3.gudit.payment.dto.TossPaymentResponse;
@@ -130,6 +131,27 @@ public class PaymentService {
 
     public TossPaymentResponse getPayment(String paymentKey) {
         return tossPaymentClient.getPayment(paymentKey);
+    }
+
+    @Transactional(readOnly = true)
+    public CsPaymentStatusResponse getCsStatus(String orderId) {
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() ->
+                        new BusinessException(
+                                PaymentErrorCode.PAYMENT_NOT_FOUND,
+                                "Payment not found. orderId=" + orderId
+                        )
+                );
+
+        Purchase purchase = payment.getPurchase();
+
+        return new CsPaymentStatusResponse(
+                payment.getOrderId(),
+                purchase.getId(),
+                purchase.getStatus(),
+                payment.getStatus(),
+                payment.getAmount()
+        );
     }
 
     private TossPaymentResponse reconcilePayment(

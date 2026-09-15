@@ -6,10 +6,12 @@ const filterButtons =
 
 let purchases = [];
 let selectedStatus = "ALL";
+let selectedPurchaseId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     loadPurchases();
     bindFilterButtons();
+    bindInquiryModal();
 });
 
 async function loadPurchases() {
@@ -94,6 +96,133 @@ function renderPurchases() {
         filteredPurchases
             .map(createPurchaseItem)
             .join("");
+
+    bindInquiryButtons();
+}
+
+function bindInquiryButtons() {
+    const inquiryButtons =
+        document.querySelectorAll(".cs-inquiry-button");
+
+    inquiryButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            const purchaseId =
+                button.dataset.purchaseId;
+
+            openInquiryModal(purchaseId);
+        });
+    });
+}
+
+function bindInquiryModal() {
+    const cancelButton =
+        document.getElementById("cs-inquiry-cancel");
+
+    const submitButton =
+        document.getElementById("cs-inquiry-submit");
+
+    const modal =
+        document.getElementById("cs-inquiry-modal");
+
+    cancelButton.addEventListener(
+        "click",
+        closeInquiryModal
+    );
+
+    submitButton.addEventListener(
+        "click",
+        submitInquiry
+    );
+
+    modal.addEventListener("click", event => {
+        if (event.target === modal) {
+            closeInquiryModal();
+        }
+    });
+}
+
+function openInquiryModal(purchaseId) {
+    selectedPurchaseId = purchaseId;
+
+    const modal =
+        document.getElementById("cs-inquiry-modal");
+
+    const textarea =
+        document.getElementById("cs-inquiry-message");
+
+    textarea.value = "";
+    modal.classList.add("open");
+    textarea.focus();
+}
+
+function closeInquiryModal() {
+    selectedPurchaseId = null;
+
+    const modal =
+        document.getElementById("cs-inquiry-modal");
+
+    modal.classList.remove("open");
+}
+
+async function submitInquiry() {
+    const textarea =
+        document.getElementById("cs-inquiry-message");
+
+    const submitButton =
+        document.getElementById("cs-inquiry-submit");
+
+    const message =
+        textarea.value.trim();
+
+    if (!message) {
+        alert("문의 내용을 입력해주세요.");
+        return;
+    }
+
+    if (!selectedPurchaseId) {
+        alert("구매 정보를 확인할 수 없습니다.");
+        return;
+    }
+
+    try {
+        submitButton.disabled = true;
+        submitButton.textContent = "접수 중...";
+
+        const response = await fetch(
+            `/api/purchases/${selectedPurchaseId}/cs-inquiries`,
+            {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message
+                })
+            }
+        );
+
+        if (response.status === 401) {
+            alert("문의하려면 로그인이 필요합니다.");
+            window.location.href = "/oauth2/authorization/kakao";
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error("문의 접수에 실패했습니다.");
+        }
+
+        alert("문의가 접수되었습니다.");
+        closeInquiryModal();
+
+    } catch (error) {
+        console.error(error);
+        alert("문의 접수 중 오류가 발생했습니다.");
+
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "문의 접수";
+    }
 }
 
 function createPurchaseItem(purchase) {
@@ -127,11 +256,22 @@ function createPurchaseItem(purchase) {
 
                     </div>
 
-                    <a
-                            href="/mypage/purchases/${purchase.purchaseId}"
-                            class="detail-link-button">
-                        상세 보기
-                    </a>
+                    <div class="purchase-item-actions">
+
+                        <a
+                                href="/mypage/purchases/${purchase.purchaseId}"
+                                class="detail-link-button">
+                            상세 보기
+                        </a>
+
+                        <button
+                                type="button"
+                                class="cs-inquiry-button"
+                                data-purchase-id="${purchase.purchaseId}">
+                            문의하기
+                        </button>
+
+                    </div>
 
                 </div>
 
