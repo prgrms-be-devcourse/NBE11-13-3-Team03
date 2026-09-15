@@ -1,5 +1,6 @@
 package com.team3.gudit.auth;
 
+import com.team3.gudit.auth.filter.InternalApiKeyFilter;
 import com.team3.gudit.auth.filter.TokenAuthenticationFilter;
 import com.team3.gudit.auth.oauth2.CustomAuthorizationRequestResolver;
 import com.team3.gudit.auth.oauth2.OAuth2FailureHandler;
@@ -25,6 +26,7 @@ public class SecurityConfig {
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
     private final TokenAuthenticationFilter tokenAuthenticationFilter;
+    private final InternalApiKeyFilter internalApiKeyFilter;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAuthorizationRequestResolver customAuthorizationRequestResolver;
 
@@ -71,6 +73,10 @@ public class SecurityConfig {
                                 "/payments/test/**"
 
                         ).permitAll()
+
+                        // 내부 자동화 API
+                        .requestMatchers("/api/internal/**")
+                        .permitAll()
 
                         // 판매 조회
                         .requestMatchers(
@@ -126,7 +132,13 @@ public class SecurityConfig {
                         )
                 )
 
-                // access 토큰 검사
+                // 내부 API Key 검사
+                .addFilterBefore(
+                        internalApiKeyFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
+
+                // access token 검사
                 .addFilterBefore(
                         tokenAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class

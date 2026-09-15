@@ -48,6 +48,12 @@ public enum AuthErrorCode implements ErrorCode {
             HttpStatus.UNAUTHORIZED,
             "AUTH_007",
             "유효하지 않음 Access Token입니다."
+    ),
+
+    INVALID_INTERNAL_API_KEY(
+            HttpStatus.UNAUTHORIZED,
+            "AUTH_008",
+            "유효하지 않은 내부 API Key입니다."
     );
 
     private final HttpStatus status;
