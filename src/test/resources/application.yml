@@ -41,3 +41,7 @@ jwt:
 
 internal:
   api-key: test-internal-api-key
+
+cs:
+  workflow:
+    webhook-url: http://localhost:5678/webhook/test-cs
