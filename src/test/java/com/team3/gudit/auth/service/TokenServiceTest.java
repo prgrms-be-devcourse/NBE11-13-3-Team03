@@ -92,10 +92,7 @@ class TokenServiceTest {
     @BeforeEach
     void setUp() {
 
-        user = User.builder()
-                .nickname("testUser")
-                .role(Role.USER)
-                .build();
+        user = new User(null, null, "testUser", null, Role.USER, com.team3.gudit.auth.oauth2.AuthProvider.KAKAO, null, null);
 
         ReflectionTestUtils.setField(
                 user,
