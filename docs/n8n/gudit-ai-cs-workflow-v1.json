@@ -1,0 +1,269 @@
+{
+  "name": "Gudit CS Workflow v1",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Gudit CS 문의",
+        "formDescription": "주문번호와 문의 내용을 입력해주세요.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "주문번호",
+              "fieldName": "orderId",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "문의 내용",
+              "fieldType": "textarea",
+              "fieldName": "message",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9572b375-4976-4bf9-ad3f-888ca400a84b",
+      "name": "On form submission",
+      "webhookId": "68de2a47-0fb2-4beb-8e65-ed99cecb9bd2"
+    },
+    {
+      "parameters": {
+        "url": "=http://172.30.240.1:8080/api/internal/payments/{{$json.orderId}}/cs-status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-INTERNAL-KEY",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "ee7eb7a1-5dde-4584-ab5c-43627534baea",
+      "name": "HTTP Request",
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5ba24c4-f4f4-4b20-bdbf-5ac299929dd9",
+              "name": "prompt",
+              "value": "={{ `너는 Gudit 고객 문의를 분석하는 CS 보조 AI다.\n\n규칙:\n- 주어진 정보만 분석한다.\n- 파일을 읽거나 수정하지 않는다.\n- 명령어를 실행하지 않는다.\n- 외부 API를 호출하지 않는다.\n- 결제 취소, 환불, DB 수정 등의 실제 조치를 수행하지 않는다.\n- 추측하지 않는다.\n- 반드시 유효한 JSON 객체만 출력한다.\n- 마크다운 코드블록을 사용하지 않는다.\n- JSON 앞뒤에 설명 문장을 추가하지 않는다.\n\n고객 문의: ${$('On form submission').item.json.message}\n주문번호: ${$json.orderId}\n구매 상태: ${$json.purchaseStatus}\n결제 상태: ${$json.paymentStatus}\n결제 금액: ${$json.amount}\n\n출력 형식:\n{\n  \"category\": \"문의 유형\",\n  \"currentState\": \"현재 상태 요약\",\n  \"assessment\": \"상태 판단\",\n  \"recommendedAction\": \"운영자 권장 조치\",\n  \"customerReplyDraft\": \"고객 답변 초안\"\n}` }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "65b9c84b-c8f3-470e-bc9f-1ce36a4f41ab",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "command": "={{ \"printf '%s' '\" + $json.prompt.replace(/'/g, \"'\\\"'\\\"'\") + \"' | claude -p\" }}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "b3b48e36-8324-495d-a643-4b818468094e",
+      "name": "Execute Command"
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = JSON.parse($json.stdout);\n\nreturn [\n  {\n    json: result\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "7e5f45d0-32d9-4d5d-bcc3-f167cad14792",
+      "name": "Code in JavaScript",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CS_SLACK_WEBHOOK_URL}}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ `*[Gudit CS 문의 분석]*\n\n*고객 문의*\n${$('On form submission').item.json.message}\n\n*주문번호*\n${$('On form submission').item.json.orderId}\n\n*문의 유형*\n${$json.category}\n\n*현재 상태*\n${$json.currentState}\n\n*판단*\n${$json.assessment}\n\n*권장 조치*\n${$json.recommendedAction}\n\n*고객 답변 초안*\n${$json.customerReplyDraft}` }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "50c38619-306d-4a4b-919d-3234e5b669ff",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CS_SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ `*[Gudit CS 문의 확인 실패]*\n\n*고객 문의*\n${$('On form submission').item.json.message}\n\n*입력한 주문번호*\n${$('On form submission').item.json.orderId}\n\n*확인 결과*\n해당 주문번호에 해당하는 결제 정보를 찾을 수 없습니다.\n\n*권장 조치*\n주문번호가 올바른지 확인하고, 필요한 경우 고객의 구매 내역을 다시 조회해 주세요.` }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        240
+      ],
+      "id": "9d8441c3-bb25-41a2-ba9d-f0f231cdf14e",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CS_SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ `*[Gudit CS AI 분석 실패]*\n\n*고객 문의*\n${$('On form submission').item.json.message}\n\n*주문번호*\n${$('On form submission').item.json.orderId}\n\n*확인 결과*\nAI 분석 결과를 정상적으로 처리하지 못했습니다.\n\n*권장 조치*\n운영자가 주문 상태를 직접 확인하고, 필요하면 AI 분석을 다시 실행해 주세요.` }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        240
+      ],
+      "id": "c70e1a3a-d683-44e4-8d5d-f2d1e8177e67",
+      "name": "HTTP Request3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Command": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "49324a96-f737-4998-9d50-0f14237c6327",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ea40caef266ee8f2af19e895ede548dd3aaec3b19e8bc1ff2e63882502553ad6"
+  },
+  "nodeGroups": [],
+  "id": "EI4A4tCZNFlpxgAC",
+  "tags": []
+}
