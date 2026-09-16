@@ -1,5 +1,6 @@
 package com.team3.gudit.payment.repository
 
+import com.team3.gudit.auth.oauth2.AuthProvider
 import com.team3.gudit.goods.config.JpaConfig
 import com.team3.gudit.goods.domain.entity.Goods
 import com.team3.gudit.payment.entity.Payment
@@ -65,12 +66,16 @@ class PaymentRepositoryTest {
     }
 
     private fun savePayment(): Payment {
-        val user = User.builder()
-            .kakaoId(System.nanoTime())
-            .nickname("테스트 사용자")
-            .email("payment-test@example.com")
-            .role(Role.USER)
-            .build()
+        val user = User(
+            null,
+            System.nanoTime(),
+            "테스트 사용자",
+            "payment-test@example.com",
+            Role.USER,
+            AuthProvider.KAKAO,
+            null,
+            null
+        )
         entityManager.persist(user)
 
         val goods = Goods.of(

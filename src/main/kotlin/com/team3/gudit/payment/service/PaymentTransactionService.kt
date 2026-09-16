@@ -218,10 +218,13 @@ class PaymentTransactionService(
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun requestPaymentCompensation(paymentKey: String?) {
         val payment = getPaymentByPaymentKey(paymentKey)
+        val compensationPaymentKey = checkNotNull(payment.paymentKey) {
+            "Payment key must be assigned before requesting compensation. paymentId=${payment.id}"
+        }
         outboxEventService.savePaymentCompensationRequired(
             payment.id,
             payment.orderId,
-            payment.paymentKey
+            compensationPaymentKey
         )
     }
 
