@@ -60,20 +60,4 @@ open class RefreshToken(
         this.expiresAt = expiresAt
     }
 
-    // Java 테스트가 Kotlin으로 전환될 때까지 기존 빌더 호출을 지원한다.
-    class Builder {
-        private var user: User? = null
-        private var tokenHash: String? = null
-        private var expiresAt: LocalDateTime? = null
-
-        fun user(user: User): Builder = apply { this.user = user }
-        fun tokenHash(tokenHash: String): Builder = apply { this.tokenHash = tokenHash }
-        fun expiresAt(expiresAt: LocalDateTime): Builder = apply { this.expiresAt = expiresAt }
-        fun build(): RefreshToken = RefreshToken(requireNotNull(user), requireNotNull(tokenHash), requireNotNull(expiresAt))
-    }
-
-    companion object {
-        @JvmStatic
-        fun builder(): Builder = Builder()
-    }
 }
