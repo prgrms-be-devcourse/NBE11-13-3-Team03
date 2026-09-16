@@ -2,6 +2,7 @@ package com.team3.gudit.auth.filter;
 
 import com.team3.gudit.auth.exception.AuthErrorCode;
 import com.team3.gudit.global.exception.ErrorResponse;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +27,15 @@ public class InternalApiKeyFilter extends OncePerRequestFilter {
 
     @Value("${internal.api-key}")
     private String internalApiKey;
+
+    @PostConstruct
+    void validateInternalApiKey() {
+        if (internalApiKey == null || internalApiKey.isBlank()) {
+            throw new IllegalStateException(
+                    "internal.api-key must not be blank"
+            );
+        }
+    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {

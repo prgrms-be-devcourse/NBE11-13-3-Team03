@@ -13,6 +13,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -186,6 +187,60 @@ class InternalApiKeyFilterTest {
 
         given(response.getWriter())
                 .willReturn(new PrintWriter(stringWriter));
+
+        // when
+        filter.doFilter(
+                request,
+                response,
+                filterChain
+        );
+
+        // then
+        verify(response)
+                .setStatus(
+                        HttpServletResponse.SC_UNAUTHORIZED
+                );
+
+        verify(filterChain, never())
+                .doFilter(request, response);
+    }
+
+    @Test
+    @DisplayName("내부 API Key 설정이 빈 문자열이면 초기화에 실패한다")
+    void blankInternalApiKeyConfiguration() {
+        // given
+        ReflectionTestUtils.setField(
+                filter,
+                "internalApiKey",
+                " "
+        );
+
+        // when & then
+        assertThrows(
+                IllegalStateException.class,
+                filter::validateInternalApiKey
+        );
+    }
+
+    @Test
+    @DisplayName("빈 API Key 헤더는 인증에 실패한다")
+    void blankInternalApiKeyHeader() throws Exception {
+        // given
+        given(request.getServletPath())
+                .willReturn(
+                        "/api/internal/payments/GUDIT_test/cs-status"
+                );
+
+        given(request.getHeader("X-INTERNAL-KEY"))
+                .willReturn("");
+
+        StringWriter stringWriter =
+                new StringWriter();
+
+        given(response.getWriter())
+                .willReturn(
+                        new PrintWriter(stringWriter)
+                );
 
         // when
         filter.doFilter(
