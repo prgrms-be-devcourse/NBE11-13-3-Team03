@@ -169,7 +169,7 @@ class PaymentCompensationConsumer(
                 payload.paymentKey
             )
 
-        when (actualPayment.status()) {
+        when (actualPayment.status) {
             "DONE" -> {
                 paymentService.cancelPayment(
                     payload.paymentKey
@@ -189,7 +189,7 @@ class PaymentCompensationConsumer(
 
             else -> throw IllegalStateException(
                 "Unsupported Toss payment status for compensation. status=" +
-                        actualPayment.status() +
+                    actualPayment.status +
                         ", paymentKey=" +
                         payload.paymentKey
             )
