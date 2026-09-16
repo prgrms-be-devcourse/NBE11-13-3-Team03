@@ -49,7 +49,7 @@ class InternalApiKeyFilterTest {
     @DisplayName("내부 API 요청에 API Key가 없으면 401을 반환한다")
     void internalApiKeyNotFound() throws Exception {
         // given
-        given(request.getRequestURI())
+        given(request.getServletPath())
                 .willReturn(
                         "/api/internal/payments/GUDIT_test/cs-status"
                 );
@@ -88,7 +88,7 @@ class InternalApiKeyFilterTest {
     @DisplayName("내부 API 요청의 API Key가 일치하지 않으면 401을 반환한다")
     void invalidInternalApiKey() throws Exception {
         // given
-        given(request.getRequestURI())
+        given(request.getServletPath())
                 .willReturn(
                         "/api/internal/payments/GUDIT_test/cs-status"
                 );
@@ -122,7 +122,7 @@ class InternalApiKeyFilterTest {
     @DisplayName("내부 API 요청의 API Key가 일치하면 다음 필터로 진행한다")
     void validInternalApiKey() throws Exception {
         // given
-        given(request.getRequestURI())
+        given(request.getServletPath())
                 .willReturn(
                         "/api/internal/payments/GUDIT_test/cs-status"
                 );
@@ -151,7 +151,7 @@ class InternalApiKeyFilterTest {
     @DisplayName("일반 API 요청은 내부 API Key 필터 대상에서 제외한다")
     void shouldNotFilterNormalApi() {
         // given
-        given(request.getRequestURI())
+        given(request.getServletPath())
                 .willReturn("/api/payments/confirm");
 
         // when
@@ -160,5 +160,47 @@ class InternalApiKeyFilterTest {
 
         // then
         assert result;
+    }
+
+    @Test
+    @DisplayName("Context Path가 있어도 내부 API Key가 없으면 401을 반환한다")
+    void internalApiWithContextPathWithoutKey() throws Exception {
+        // given
+        given(request.getContextPath())
+                .willReturn("/gudit");
+
+        given(request.getRequestURI())
+                .willReturn(
+                        "/gudit/api/internal/payments/GUDIT_test/cs-status"
+                );
+
+        given(request.getServletPath())
+                .willReturn(
+                        "/api/internal/payments/GUDIT_test/cs-status"
+                );
+
+        given(request.getHeader("X-INTERNAL-KEY"))
+                .willReturn(null);
+
+        StringWriter stringWriter = new StringWriter();
+
+        given(response.getWriter())
+                .willReturn(new PrintWriter(stringWriter));
+
+        // when
+        filter.doFilter(
+                request,
+                response,
+                filterChain
+        );
+
+        // then
+        verify(response)
+                .setStatus(
+                        HttpServletResponse.SC_UNAUTHORIZED
+                );
+
+        verify(filterChain, never())
+                .doFilter(request, response);
     }
 }

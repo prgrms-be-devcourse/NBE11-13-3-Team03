@@ -7,6 +7,7 @@ const filterButtons =
 let purchases = [];
 let selectedStatus = "ALL";
 let selectedPurchaseId = null;
+let isInquirySubmitting = false;
 
 document.addEventListener("DOMContentLoaded", () => {
     loadPurchases();
@@ -142,6 +143,10 @@ function bindInquiryModal() {
 }
 
 function openInquiryModal(purchaseId) {
+    if (isInquirySubmitting) {
+        return;
+    }
+
     selectedPurchaseId = purchaseId;
 
     const modal =
@@ -156,6 +161,10 @@ function openInquiryModal(purchaseId) {
 }
 
 function closeInquiryModal() {
+    if (isInquirySubmitting) {
+        return;
+    }
+
     selectedPurchaseId = null;
 
     const modal =
@@ -171,6 +180,9 @@ async function submitInquiry() {
     const submitButton =
         document.getElementById("cs-inquiry-submit");
 
+    const cancelButton =
+        document.getElementById("cs-inquiry-cancel");
+
     const message =
         textarea.value.trim();
 
@@ -185,8 +197,11 @@ async function submitInquiry() {
     }
 
     try {
+        isInquirySubmitting = true;
+
         submitButton.disabled = true;
         submitButton.textContent = "접수 중...";
+        cancelButton.disabled = true;
 
         const response = await fetch(
             `/api/purchases/${selectedPurchaseId}/cs-inquiries`,
@@ -212,6 +227,8 @@ async function submitInquiry() {
             throw new Error("문의 접수에 실패했습니다.");
         }
 
+        isInquirySubmitting = false;
+
         alert("문의가 접수되었습니다.");
         closeInquiryModal();
 
@@ -220,8 +237,11 @@ async function submitInquiry() {
         alert("문의 접수 중 오류가 발생했습니다.");
 
     } finally {
+        isInquirySubmitting = false;
+
         submitButton.disabled = false;
         submitButton.textContent = "문의 접수";
+        cancelButton.disabled = false;
     }
 }
 
