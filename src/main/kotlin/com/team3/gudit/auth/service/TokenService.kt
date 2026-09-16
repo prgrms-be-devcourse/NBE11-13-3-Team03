@@ -94,8 +94,7 @@ class TokenService(
         if (!refreshTokenHasher.matches(storedToken.tokenHash, refreshToken)) {
             throw BusinessException(AuthErrorCode.REFRESH_TOKEN_MISMATCH)
         }
-        // 기존 캐시 복구 TTL 계산 순서를 유지한다.
-        val ttl = Duration.between(storedToken.expiresAt, now)
+        val ttl = Duration.between(now, storedToken.expiresAt)
         refreshTokenCacheRepository.save(userId, storedToken.tokenHash, ttl)
     }
 }

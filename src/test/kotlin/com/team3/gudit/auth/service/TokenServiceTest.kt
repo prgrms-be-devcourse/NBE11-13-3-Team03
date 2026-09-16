@@ -29,12 +29,12 @@ import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class TokenServiceTest(
-    @Mock private val tokenProvider: TokenProvider,
-    @Mock private val jwtProperties: JwtProperties,
-    @Mock private val userRepository: UserRepository,
-    @Mock private val refreshTokenHasher: RefreshTokenHasher,
-    @Mock private val refreshTokenRepository: RefreshTokenRepository,
-    @Mock private val refreshTokenCacheRepository: RefreshTokenCacheRepository,
+    @param:Mock private val tokenProvider: TokenProvider,
+    @param:Mock private val jwtProperties: JwtProperties,
+    @param:Mock private val userRepository: UserRepository,
+    @param:Mock private val refreshTokenHasher: RefreshTokenHasher,
+    @param:Mock private val refreshTokenRepository: RefreshTokenRepository,
+    @param:Mock private val refreshTokenCacheRepository: RefreshTokenCacheRepository,
 ) {
     private val tokenService = TokenService(tokenProvider, jwtProperties, userRepository, refreshTokenHasher, refreshTokenRepository, refreshTokenCacheRepository)
     private val user = User.builder().nickname("testUser").role(Role.USER).build()
@@ -110,6 +110,8 @@ class TokenServiceTest(
         `when`(tokenProvider.generateToken(user, REFRESH_VALIDITY, TokenType.REFRESH)).thenReturn(NEW_REFRESH_TOKEN)
         `when`(refreshTokenHasher.hash(NEW_REFRESH_TOKEN)).thenReturn(NEW_HASH)
 
+        val cacheTtlCaptor = ArgumentCaptor.forClass(Duration::class.java)
+
         // when
         val result = tokenService.reissueToken(REFRESH_TOKEN)
 
@@ -117,6 +119,12 @@ class TokenServiceTest(
         assertThat(result.accessToken).isEqualTo(NEW_ACCESS_TOKEN)
         assertThat(result.refreshToken).isEqualTo(NEW_REFRESH_TOKEN)
         assertThat(storedToken.tokenHash).isEqualTo(NEW_HASH)
+        // 캐시 미스 후 DB의 유효한 토큰으로 캐시를 복구할 때 TTL은 남은 만료 시간이다.
+        verify(refreshTokenCacheRepository).save(
+            eq(USER_ID), eq(STORED_HASH) ?: STORED_HASH,
+            cacheTtlCaptor.capture() ?: Duration.ZERO,
+        )
+        assertThat(cacheTtlCaptor.value).isPositive().isLessThanOrEqualTo(REFRESH_VALIDITY)
         verify(tokenProvider, times(1)).generateToken(user, ACCESS_VALIDITY, TokenType.ACCESS)
         verify(tokenProvider, times(1)).generateToken(user, REFRESH_VALIDITY, TokenType.REFRESH)
         // Mockito 매처의 null 반환값에 기본값을 제공해 Kotlin 호출의 null 검사를 통과한다.
