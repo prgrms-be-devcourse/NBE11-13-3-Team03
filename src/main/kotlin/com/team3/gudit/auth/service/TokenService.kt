@@ -56,14 +56,15 @@ class TokenService(
         val now = LocalDateTime.now()
         val tokenHash = refreshTokenHasher.hash(refreshToken)
         val expiresAt = now.plus(jwtProperties.refreshTokenValidity)
-        val existingToken = refreshTokenRepository.findByUserId(user.id)
+        val userId = requireNotNull(user.id) { "토큰을 발급할 사용자 ID가 없습니다." }
+        val existingToken = refreshTokenRepository.findByUserId(userId)
         if (existingToken.isPresent) {
             existingToken.get().rotate(tokenHash, expiresAt)
         } else {
             val newToken = RefreshToken(user, tokenHash, expiresAt)
             refreshTokenRepository.save(newToken)
         }
-        refreshTokenCacheRepository.save(user.id, tokenHash, Duration.between(now, expiresAt))
+        refreshTokenCacheRepository.save(userId, tokenHash, Duration.between(now, expiresAt))
     }
 
     private fun validateRefreshToken(refreshToken: String?) {

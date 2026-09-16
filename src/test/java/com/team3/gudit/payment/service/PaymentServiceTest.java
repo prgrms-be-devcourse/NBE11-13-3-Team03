@@ -2,15 +2,14 @@ package com.team3.gudit.payment.service;
 
 import com.team3.gudit.global.exception.BusinessException;
 import com.team3.gudit.payment.client.TossPaymentClient;
-import com.team3.gudit.payment.dto.PaymentConfirmRequest;
-import com.team3.gudit.payment.dto.TossPaymentCancelRequest;
-import com.team3.gudit.payment.dto.TossPaymentConfirmRequest;
-import com.team3.gudit.payment.dto.TossPaymentResponse;
+import com.team3.gudit.payment.dto.*;
 import com.team3.gudit.payment.entity.Payment;
+import com.team3.gudit.payment.entity.PaymentStatus;
 import com.team3.gudit.payment.exception.PaymentErrorCode;
 import com.team3.gudit.payment.exception.TossPaymentException;
 import com.team3.gudit.payment.repository.PaymentRepository;
 import com.team3.gudit.purchase.entity.Purchase;
+import com.team3.gudit.purchase.entity.PurchaseStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -614,5 +613,87 @@ class PaymentServiceTest {
                                     PaymentErrorCode.PAYMENT_NOT_FOUND
                             );
                 });
+    }
+
+    @Test
+    @DisplayName("주문번호로 결제와 구매 상태를 조회한다")
+    void getStatus() {
+        // given
+        String orderId = "GUDIT_test-order-id";
+
+        Payment payment = mock(Payment.class);
+        Purchase purchase = mock(Purchase.class);
+
+        given(paymentRepository.findByOrderId(orderId))
+                .willReturn(Optional.of(payment));
+
+        given(payment.getOrderId())
+                .willReturn(orderId);
+
+        given(payment.getPurchase())
+                .willReturn(purchase);
+
+        given(payment.getStatus())
+                .willReturn(PaymentStatus.DONE);
+
+        given(payment.getAmount())
+                .willReturn(15000);
+
+        given(purchase.getId())
+                .willReturn(100L);
+
+        given(purchase.getStatus())
+                .willReturn(PurchaseStatus.PURCHASED);
+
+        // when
+        PaymentStatusResult response =
+                paymentService.getStatus(orderId);
+
+        // then
+        assertThat(response.orderId())
+                .isEqualTo(orderId);
+
+        assertThat(response.purchaseId())
+                .isEqualTo(100L);
+
+        assertThat(response.purchaseStatus())
+                .isEqualTo(PurchaseStatus.PURCHASED);
+
+        assertThat(response.paymentStatus())
+                .isEqualTo(PaymentStatus.DONE);
+
+        assertThat(response.amount())
+                .isEqualTo(15000);
+
+        verify(paymentRepository)
+                .findByOrderId(orderId);
+    }
+
+    @Test
+    @DisplayName("주문번호에 해당하는 결제가 없으면 예외가 발생한다")
+    void getStatusNotFound() {
+        // given
+        String orderId = "GUDIT_not-found";
+
+        given(paymentRepository.findByOrderId(orderId))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(
+                () -> paymentService.getStatus(orderId)
+        )
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException =
+                            (BusinessException) exception;
+
+                    assertThat(businessException.getErrorCode())
+                            .isEqualTo(
+                                    PaymentErrorCode.PAYMENT_NOT_FOUND
+                            );
+                });
+
+        verify(paymentRepository)
+                .findByOrderId(orderId);
     }
 }

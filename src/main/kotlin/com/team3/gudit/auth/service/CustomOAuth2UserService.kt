@@ -25,27 +25,28 @@ class CustomOAuth2UserService(
         val nameAttributeKey = registration.providerDetails.userInfoEndpoint.userNameAttributeName
         val provider = AuthProvider.from(registration.registrationId)
         val info = OAuth2UserInfoFactory.of(provider, oauthUser.attributes)
+        val kakaoId = requireNotNull(info.id()) { "OAuth2 사용자 식별자가 없습니다." }
         if (info.email() == null) {
             throw OAuth2AuthenticationException(
                 OAuth2Error("email_required"),
                 "SNS 계정에서 이메일을 가져오지 못했습니다. 이메일 제공 동의가 필요합니다.",
             )
         }
-        val user = userRepository.findByKakaoIdAndProvider(info.id(), provider)
+        val user = userRepository.findByKakaoIdAndProvider(kakaoId, provider)
             .map { existing ->
                 existing.updateProfile(info.name())
-                if (isAdmin(info.id()) && existing.role != Role.ADMIN) existing.promoteToAdmin()
+                if (isAdmin(kakaoId) && existing.role != Role.ADMIN) existing.promoteToAdmin()
                 existing
             }
             .orElseGet {
                 userRepository.save(
-                    User.builder()
-                        .kakaoId(info.id())
-                        .nickname(info.name())
-                        .email(info.email())
-                        .role(if (isAdmin(info.id())) Role.ADMIN else Role.USER)
-                        .provider(provider)
-                        .build(),
+                    User(
+                        kakaoId = kakaoId,
+                        nickname = info.name(),
+                        email = info.email(),
+                        role = if (isAdmin(kakaoId)) Role.ADMIN else Role.USER,
+                        provider = provider,
+                    ),
                 )
             }
         return CustomOAuth2User(user, provider, info, oauthUser.attributes, nameAttributeKey)

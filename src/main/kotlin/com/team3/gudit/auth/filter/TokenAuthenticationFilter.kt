@@ -13,6 +13,9 @@ import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class TokenAuthenticationFilter(private val tokenProvider: TokenProvider) : OncePerRequestFilter() {
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean =
+        request.requestURI.startsWith("/api/internal/")
+
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain) {
         val token = resolveToken(request)
         if (token == null) {

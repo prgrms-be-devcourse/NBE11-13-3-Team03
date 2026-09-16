@@ -26,8 +26,12 @@ class AuthenticationIntegrationTest @Autowired constructor(
     private val mockMvc: MockMvc,
     private val tokenProvider: TokenProvider,
 ) {
-    private var user = User.builder()
-        .kakaoId(12345L).role(Role.USER).nickname("testUser").email("test@example.com").build()
+    private var user = User(
+        kakaoId = 12345L,
+        nickname = "testUser",
+        email = "test@example.com",
+        role = Role.USER,
+    )
 
     @BeforeEach
     fun setUp() {

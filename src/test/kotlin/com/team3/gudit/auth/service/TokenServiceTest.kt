@@ -37,7 +37,7 @@ class TokenServiceTest(
     @param:Mock private val refreshTokenCacheRepository: RefreshTokenCacheRepository,
 ) {
     private val tokenService = TokenService(tokenProvider, jwtProperties, userRepository, refreshTokenHasher, refreshTokenRepository, refreshTokenCacheRepository)
-    private val user = User.builder().nickname("testUser").role(Role.USER).build()
+    private val user = User(nickname = "testUser", role = Role.USER)
 
     @BeforeEach
     fun setUp() {

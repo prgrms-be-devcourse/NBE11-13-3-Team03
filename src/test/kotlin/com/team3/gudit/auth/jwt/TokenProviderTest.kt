@@ -12,7 +12,7 @@ import java.time.Duration
 
 @SpringBootTest
 class TokenProviderTest @Autowired constructor(private val tokenProvider: TokenProvider) {
-    private val user = User.builder().id(1L).role(Role.USER).build()
+    private val user = User(id = 1L, role = Role.USER)
     @Test
     @DisplayName("정상적인 Access Token을 검증하면 VALID를 반환한다")
     fun validateAccessToken_success() {

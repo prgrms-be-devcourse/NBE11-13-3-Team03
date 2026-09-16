@@ -64,6 +64,13 @@ jwt:
   access-token-validity: 2h
   refresh-token-validity: 7d
 
+internal:
+  api-key: ${INTERNAL_API_KEY}
+
+cs:
+  workflow:
+    webhook-url: ${CS_WORKFLOW_WEBHOOK_URL}
+
 toss:
   payments:
     client-key: ${TOSS_CLIENT_KEY}
