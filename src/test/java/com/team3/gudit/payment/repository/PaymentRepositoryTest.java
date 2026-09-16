@@ -95,12 +95,7 @@ class PaymentRepositoryTest {
     }
 
     private Payment savePayment() {
-        User user = User.builder()
-                .kakaoId(System.nanoTime())
-                .nickname("테스트 사용자")
-                .email("payment-test@example.com")
-                .role(Role.USER)
-                .build();
+        User user = new User(null, System.nanoTime(), "테스트 사용자", "payment-test@example.com", Role.USER, com.team3.gudit.auth.oauth2.AuthProvider.KAKAO, null, null);
         entityManager.persist(user);
 
         Goods goods = Goods.of(

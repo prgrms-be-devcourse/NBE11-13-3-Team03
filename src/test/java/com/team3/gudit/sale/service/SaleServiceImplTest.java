@@ -9,6 +9,7 @@ import com.team3.gudit.sale.domain.entity.Sale;
 import com.team3.gudit.sale.domain.enums.SaleStatus;
 import com.team3.gudit.sale.domain.repository.SaleRepository;
 import com.team3.gudit.sale.dto.SaleRedisDto;
+import com.team3.gudit.sale.dto.reqeust.SaleCreateRequestDto;
 import com.team3.gudit.sale.dto.reqeust.SaleUpdateRequestDto;
 import com.team3.gudit.sale.dto.response.SaleDetailResponseDto;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,6 +73,40 @@ class SaleServiceImplTest {
                 redisTemplate,
                 purchaseRepository
         );
+    }
+
+    @Test
+    @DisplayName("판매 생성 시 로그인한 관리자 ID를 createdBy에 저장한다")
+    void createSaleStoresCreatedBy() {
+        // given
+        long adminUserId = 7L;
+        LocalDateTime startAt = LocalDateTime.now().plusDays(1);
+        LocalDateTime endAt = startAt.plusHours(2);
+        Goods goods = Goods.builder()
+                .id(10L)
+                .name("테스트 상품")
+                .price(10_000)
+                .status(GoodsStatus.ACTIVE)
+                .build();
+        SaleCreateRequestDto request = new SaleCreateRequestDto(
+                10L,
+                100,
+                2,
+                startAt,
+                endAt
+        );
+
+        given(goodsRepository.findById(10L)).willReturn(Optional.of(goods));
+        given(saleRepository.save(any(Sale.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        saleService.createSale(request, adminUserId);
+
+        // then
+        ArgumentCaptor<Sale> captor = ArgumentCaptor.forClass(Sale.class);
+        verify(saleRepository).save(captor.capture());
+        assertThat(captor.getValue().getCreatedBy()).isEqualTo(adminUserId);
     }
 
     @Test
