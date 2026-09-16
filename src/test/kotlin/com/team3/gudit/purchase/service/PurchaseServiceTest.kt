@@ -12,6 +12,7 @@ import com.team3.gudit.purchase.exception.PurchaseErrorCode
 import com.team3.gudit.purchase.repository.PurchaseRepository
 import com.team3.gudit.sale.domain.entity.Sale
 import com.team3.gudit.sale.domain.repository.SaleRepository
+import com.team3.gudit.sale.metrics.InventoryMetrics
 import com.team3.gudit.sale.service.InventoryService
 import com.team3.gudit.user.domain.entity.User
 import com.team3.gudit.user.domain.repository.UserRepository
@@ -53,6 +54,9 @@ class PurchaseServiceTest {
 
     @Mock
     private lateinit var paymentService: PaymentService
+
+    @Mock
+    private lateinit var inventoryMetrics: InventoryMetrics
 
     @Mock
     private lateinit var outboxEventService: OutboxEventService

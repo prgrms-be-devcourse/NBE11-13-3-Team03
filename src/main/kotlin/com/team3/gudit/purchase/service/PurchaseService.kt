@@ -35,8 +35,7 @@ class PurchaseService(
     private val saleRepository: SaleRepository,
     private val inventoryService: InventoryService,
     private val paymentService: PaymentService,
-    // Legacy Java @InjectMocks can omit metrics when no synchronization is active.
-    private val inventoryMetrics: InventoryMetrics?,
+    private val inventoryMetrics: InventoryMetrics,
     private val outboxEventService: OutboxEventService,
 ) {
     @Transactional
@@ -130,11 +129,9 @@ class PurchaseService(
                 }
                 try {
                     inventoryService.restoreStock(saleId, userId, quantity)
-                    val metrics = inventoryMetrics ?: throw NullPointerException("inventoryMetrics")
-                    metrics.recordRollback("success")
+                    inventoryMetrics.recordRollback("success")
                 } catch (exception: RuntimeException) {
-                    val metrics = inventoryMetrics ?: throw NullPointerException("inventoryMetrics")
-                    metrics.recordRollback("failed")
+                    inventoryMetrics.recordRollback("failed")
                     throw exception
                 }
             }
