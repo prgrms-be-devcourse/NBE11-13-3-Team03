@@ -63,7 +63,7 @@ class SaleServiceImpl(
         }
 
         // READY / CLOSED 또는 Redis Key가 없는 경우 RDB 값 사용
-        val remainingStock = sale.remainingStock ?: throw NullPointerException("remainingStock")
+        val remainingStock = sale.remainingStock
         return SaleDetailResponseDto.from(
             sale,
             remainingStock,
@@ -188,7 +188,7 @@ class SaleServiceImpl(
         redisTemplate.opsForHash<String, String>().putAll(infoKey, dto.toHashFields())
 
         // 판매 종료 후 2일까지 유지
-        val endAt = sale.endAt ?: throw NullPointerException("endAt")
+        val endAt = sale.endAt
         val expireAt = endAt.plusDays(2)
         val ttl = Duration.between(LocalDateTime.now(), expireAt)
 
@@ -298,7 +298,7 @@ class SaleServiceImpl(
             return false
         }
 
-        val endAt = sale.endAt ?: throw NullPointerException("endAt")
+        val endAt = sale.endAt
         val cancellationDeadline = endAt.plusDays(1)
 
         // Redis user key가 살아 있고 취소 가능한 기간이면 보류
@@ -355,7 +355,7 @@ class SaleServiceImpl(
         currentStock: Int?,
     ): SaleStatus? {
         // 조회 응답에서는 즉시 CLOSED로 표시
-        val endAt = sale.endAt ?: throw NullPointerException("endAt")
+        val endAt = sale.endAt
         if (sale.status == SaleStatus.ON_SALE && !LocalDateTime.now().isBefore(endAt)) {
             return SaleStatus.CLOSED
         }

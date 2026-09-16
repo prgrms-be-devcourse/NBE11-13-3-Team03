@@ -20,7 +20,7 @@ data class SaleCreateResponseDto(
     companion object {
         @JvmStatic
         fun from(sale: Sale): SaleCreateResponseDto {
-            val goods = sale.goods ?: throw NullPointerException("goods")
+            val goods = sale.goods
 
             return SaleCreateResponseDto(
                 goods.id,

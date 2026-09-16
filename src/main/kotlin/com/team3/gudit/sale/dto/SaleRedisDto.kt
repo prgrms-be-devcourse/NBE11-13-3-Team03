@@ -1,5 +1,7 @@
 package com.team3.gudit.sale.dto
 
+import com.team3.gudit.global.exception.BusinessException
+import com.team3.gudit.global.exception.GlobalErrorCode
 import com.team3.gudit.sale.domain.entity.Sale
 import com.team3.gudit.sale.domain.enums.SaleStatus
 import java.time.ZoneId
@@ -20,8 +22,8 @@ class SaleRedisDto(
         @JvmStatic
         fun from(sale: Sale): SaleRedisDto {
             val zoneId = ZoneId.systemDefault()
-            val startAt = sale.startAt ?: throw NullPointerException("startAt")
-            val endAt = sale.endAt ?: throw NullPointerException("endAt")
+            val startAt = sale.startAt
+            val endAt = sale.endAt
 
             return SaleRedisDto(
                 sale.id,
@@ -38,7 +40,7 @@ class SaleRedisDto(
         fields["startAt"] = startAtMilli.toString()
         fields["endAt"] = endAtMilli.toString()
         fields["maxPurchaseQuantity"] = maxPurchaseQuantity.toString()
-        fields["status"] = status?.name ?: throw NullPointerException("status")
+        fields["status"] = status?.name ?: throw BusinessException(GlobalErrorCode.INTERNAL_SERVER_ERROR)
         return fields
     }
 

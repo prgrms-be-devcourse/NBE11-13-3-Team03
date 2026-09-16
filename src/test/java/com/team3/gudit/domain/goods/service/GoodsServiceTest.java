@@ -68,7 +68,7 @@ class GoodsServiceTest {
                     .price(10000)
                     .description("설명A")
                     .imageUrl(storedImageUrl)
-                    .build();
+                    .status(GoodsStatus.ACTIVE).build();
 
             Goods savedGoods = Goods.builder()
                     .id(1L)
@@ -76,7 +76,7 @@ class GoodsServiceTest {
                     .price(10000)
                     .description("설명A")
                     .imageUrl(storedImageUrl)
-                    .build();
+                    .status(GoodsStatus.ACTIVE).build();
 
             GoodsCreateResponse response = GoodsCreateResponse.builder()
                     .id(1L)
@@ -112,8 +112,8 @@ class GoodsServiceTest {
         @DisplayName("상태가 ACTIVE인 굿즈 목록을 조회한다.")
         void goodsList_success() {
             // given
-            Goods goods1 = Goods.builder().id(1L).name("굿즈A").status(GoodsStatus.ACTIVE).build();
-            Goods goods2 = Goods.builder().id(2L).name("굿즈B").status(GoodsStatus.ACTIVE).build();
+            Goods goods1 = Goods.builder().id(1L).name("굿즈A").status(GoodsStatus.ACTIVE).price(10000).build();
+            Goods goods2 = Goods.builder().id(2L).name("굿즈B").status(GoodsStatus.ACTIVE).price(10000).build();
             List<Goods> goodsList = List.of(goods1, goods2);
 
             GoodsListResponse response1 = GoodsListResponse.builder().id(1L).name("굿즈A").build();
@@ -142,7 +142,7 @@ class GoodsServiceTest {
         void goodsDetail_success() {
             // given
             Long goodsId = 1L;
-            Goods goods = Goods.builder().id(goodsId).name("굿즈A").status(GoodsStatus.ACTIVE).build();
+            Goods goods = Goods.builder().id(goodsId).name("굿즈A").status(GoodsStatus.ACTIVE).price(10000).build();
             GoodsDetailResponse response = GoodsDetailResponse.builder().goodsId(goodsId).name("굿즈A").build();
 
             given(goodsRepository.findByIdAndStatus(goodsId, GoodsStatus.ACTIVE)).willReturn(Optional.of(goods));
@@ -186,7 +186,7 @@ class GoodsServiceTest {
                     "new image".getBytes()
             );
 
-            Goods goods = Goods.builder().id(goodsId).name("기존 굿즈").imageUrl("/thumbnails/old.png").build();
+            Goods goods = Goods.builder().id(goodsId).name("기존 굿즈").imageUrl("/thumbnails/old.png").price(10000).status(GoodsStatus.ACTIVE).build();
             String newImageUrl = "/thumbnails/new.png";
             GoodsUpdateResponse response = GoodsUpdateResponse.builder().id(goodsId).name("수정된 굿즈").build();
 
@@ -210,7 +210,7 @@ class GoodsServiceTest {
             Long goodsId = 1L;
             GoodsUpdateRequest request = new GoodsUpdateRequest("수정된 굿즈", "수정된 설명", 15000, null);
 
-            Goods goods = Goods.builder().id(goodsId).name("기존 굿즈").imageUrl("/thumbnails/old.png").build();
+            Goods goods = Goods.builder().id(goodsId).name("기존 굿즈").imageUrl("/thumbnails/old.png").price(10000).status(GoodsStatus.ACTIVE).build();
             GoodsUpdateResponse response = GoodsUpdateResponse.builder().id(goodsId).name("수정된 굿즈").build();
 
             given(goodsRepository.findById(goodsId)).willReturn(Optional.of(goods));
@@ -236,7 +236,7 @@ class GoodsServiceTest {
             // given
             Long goodsId = 1L;
             GoodsStatusUpdateRequest request = new GoodsStatusUpdateRequest(GoodsStatus.INACTIVE);
-            Goods goods = Goods.builder().id(goodsId).status(GoodsStatus.ACTIVE).build();
+            Goods goods = Goods.builder().id(goodsId).status(GoodsStatus.ACTIVE).name("테스트 상품").price(10000).build();
             GoodsStatusUpdateResponse response = GoodsStatusUpdateResponse.builder().id(goodsId).status(GoodsStatus.INACTIVE).build();
 
             given(goodsRepository.findById(goodsId)).willReturn(Optional.of(goods));

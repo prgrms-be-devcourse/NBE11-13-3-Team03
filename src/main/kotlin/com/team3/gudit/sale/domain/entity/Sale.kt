@@ -1,6 +1,7 @@
 package com.team3.gudit.sale.domain.entity
 
 import com.team3.gudit.global.exception.BusinessException
+import com.team3.gudit.global.exception.GlobalErrorCode
 import com.team3.gudit.goods.domain.entity.Goods
 import com.team3.gudit.sale.domain.enums.SaleStatus
 import com.team3.gudit.sale.exception.SaleErrorCode
@@ -32,7 +33,7 @@ class Sale protected constructor() {
 
     @field:ManyToOne(fetch = FetchType.LAZY)
     @field:JoinColumn(name = "goods_id", nullable = false)
-    var goods: Goods? = null
+    lateinit var goods: Goods
         protected set
 
     @field:Column(name = "created_by")
@@ -40,28 +41,28 @@ class Sale protected constructor() {
         protected set
 
     @field:Column(name = "initial_stock", nullable = false)
-    var initialStock: Int? = null
+    var initialStock: Int = 0
         protected set
 
     @field:Column(name = "remaining_stock", nullable = false)
-    var remainingStock: Int? = null
+    var remainingStock: Int = 0
         protected set
 
     @field:Column(name = "max_purchase_quantity")
-    var maxPurchaseQuantity: Int? = null
+    var maxPurchaseQuantity: Int = 0
         protected set
 
     @field:Enumerated(EnumType.STRING)
     @field:Column(name = "status", nullable = false)
-    var status: SaleStatus? = null
+    var status: SaleStatus = SaleStatus.READY
         protected set
 
     @field:Column(name = "start_at", nullable = false)
-    var startAt: LocalDateTime? = null
+    lateinit var startAt: LocalDateTime
         protected set
 
     @field:Column(name = "end_at", nullable = false)
-    var endAt: LocalDateTime? = null
+    lateinit var endAt: LocalDateTime
         protected set
 
     @field:CreatedDate
@@ -93,14 +94,14 @@ class Sale protected constructor() {
         finalStockSyncedAt: LocalDateTime?,
     ) : this() {
         this.id = id
-        this.goods = goods
+        this.goods = goods ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
         this.createdBy = createdBy
-        this.initialStock = initialStock
-        this.remainingStock = remainingStock
-        this.maxPurchaseQuantity = maxPurchaseQuantity
-        this.status = status
-        this.startAt = startAt
-        this.endAt = endAt
+        this.initialStock = initialStock ?: throw BusinessException(SaleErrorCode.INVALID_INITIAL_STOCK)
+        this.remainingStock = remainingStock ?: throw BusinessException(SaleErrorCode.INVALID_REMAINING_STOCK)
+        this.maxPurchaseQuantity = maxPurchaseQuantity ?: throw BusinessException(SaleErrorCode.INVALID_MAX_PURCHASE_QUANTITY)
+        this.status = status ?: throw BusinessException(SaleErrorCode.INVALID_STATUS_TRANSITION)
+        this.startAt = startAt ?: throw BusinessException(SaleErrorCode.INVALID_SALE_PERIOD)
+        this.endAt = endAt ?: throw BusinessException(SaleErrorCode.INVALID_SALE_PERIOD)
         this.createdAt = createdAt
         this.updatedAt = updatedAt
         this.finalStockSyncedAt = finalStockSyncedAt
@@ -125,18 +126,18 @@ class Sale protected constructor() {
         )
 
         this.id = id
-        this.goods = goods
+        this.goods = goods ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
         this.createdBy = createdBy
-        this.initialStock = initialStock
-        this.remainingStock = remainingStock ?: initialStock
-        this.maxPurchaseQuantity = maxPurchaseQuantity
+        this.initialStock = initialStock ?: throw BusinessException(SaleErrorCode.INVALID_INITIAL_STOCK)
+        this.remainingStock = remainingStock ?: this.initialStock
+        this.maxPurchaseQuantity = maxPurchaseQuantity ?: throw BusinessException(SaleErrorCode.INVALID_MAX_PURCHASE_QUANTITY)
         this.status = status ?: SaleStatus.READY
-        this.startAt = startAt
-        this.endAt = endAt
+        this.startAt = startAt ?: throw BusinessException(SaleErrorCode.INVALID_SALE_PERIOD)
+        this.endAt = endAt ?: throw BusinessException(SaleErrorCode.INVALID_SALE_PERIOD)
     }
 
     fun decreaseStock(count: Int) {
-        val currentStock = remainingStock ?: throw NullPointerException("remainingStock")
+        val currentStock = remainingStock
         if (currentStock - count < 0) {
             throw BusinessException(SaleErrorCode.NOT_ENOUGH_STOCK)
         }
@@ -144,7 +145,7 @@ class Sale protected constructor() {
     }
 
     fun restoreStock(count: Int) {
-        val currentStock = remainingStock ?: throw NullPointerException("remainingStock")
+        val currentStock = remainingStock
         remainingStock = currentStock + count
     }
 
@@ -172,7 +173,7 @@ class Sale protected constructor() {
     }
 
     fun validatePurchaseQuantity(purchaseQuantity: Int) {
-        val maximum = maxPurchaseQuantity ?: throw NullPointerException("maxPurchaseQuantity")
+        val maximum = maxPurchaseQuantity
         if (maximum < purchaseQuantity) {
             throw BusinessException(SaleErrorCode.EXCEEDED_PURCHASE_QUANTITY)
         }
@@ -192,14 +193,17 @@ class Sale protected constructor() {
             endAt,
         )
 
-        this.initialStock = initialStock
-        remainingStock = initialStock
-        this.maxPurchaseQuantity = maxPurchaseQuantity
-        this.startAt = startAt
-        this.endAt = endAt
+        this.initialStock = initialStock ?: throw BusinessException(SaleErrorCode.INVALID_INITIAL_STOCK)
+        remainingStock = this.initialStock
+        this.maxPurchaseQuantity = maxPurchaseQuantity ?: throw BusinessException(SaleErrorCode.INVALID_MAX_PURCHASE_QUANTITY)
+        this.startAt = startAt ?: throw BusinessException(SaleErrorCode.INVALID_SALE_PERIOD)
+        this.endAt = endAt ?: throw BusinessException(SaleErrorCode.INVALID_SALE_PERIOD)
     }
 
     fun updateSaleStatus(status: SaleStatus?) {
+        if (status == null) {
+            throw BusinessException(SaleErrorCode.INVALID_STATUS_TRANSITION)
+        }
         if (this.status == status) {
             return
         }
@@ -219,8 +223,8 @@ class Sale protected constructor() {
     }
 
     private fun isWithinSalePeriod(): Boolean {
-        val currentStartAt = startAt ?: throw NullPointerException("startAt")
-        val currentEndAt = endAt ?: throw NullPointerException("endAt")
+        val currentStartAt = startAt
+        val currentEndAt = endAt
         val now = LocalDateTime.now()
         return !now.isBefore(currentStartAt) && now.isBefore(currentEndAt)
     }

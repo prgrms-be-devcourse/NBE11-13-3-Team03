@@ -28,7 +28,7 @@ data class SaleDetailResponseDto(
         fun from(sale: Sale): SaleDetailResponseDto =
             from(
                 sale,
-                sale.remainingStock ?: throw NullPointerException("remainingStock"),
+                sale.remainingStock,
                 sale.status,
             )
 
@@ -38,8 +38,8 @@ data class SaleDetailResponseDto(
             remainingStock: Int,
             status: SaleStatus?,
         ): SaleDetailResponseDto {
-            val goods = sale.goods ?: throw NullPointerException("goods")
-            val initialStock = sale.initialStock ?: throw NullPointerException("initialStock")
+            val goods = sale.goods
+            val initialStock = sale.initialStock
 
             return SaleDetailResponseDto(
                 sale.id,

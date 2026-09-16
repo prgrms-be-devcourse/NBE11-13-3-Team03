@@ -41,7 +41,7 @@ data class SaleListResponseDto(
             remainingStock: Int?,
             status: SaleStatus?,
         ): SaleListResponseDto {
-            val goods = sale.goods ?: throw NullPointerException("goods")
+            val goods = sale.goods
 
             return SaleListResponseDto(
                 sale.id,

@@ -1,5 +1,7 @@
 package com.team3.gudit.goods.domain.entity
 
+import com.team3.gudit.global.exception.BusinessException
+import com.team3.gudit.global.exception.GlobalErrorCode
 import com.team3.gudit.goods.domain.enums.GoodsStatus
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -25,7 +27,7 @@ class Goods protected constructor() {
         protected set
 
     @field:Column(nullable = false)
-    var name: String? = null
+    lateinit var name: String
         protected set
 
     @field:Column(length = 100)
@@ -33,7 +35,7 @@ class Goods protected constructor() {
         protected set
 
     @field:Column(nullable = false)
-    var price: Int? = null
+    var price: Int = 0
         protected set
 
     var imageUrl: String? = null
@@ -41,7 +43,7 @@ class Goods protected constructor() {
 
     @field:Enumerated(EnumType.STRING)
     @field:Column(name = "status", nullable = false)
-    var status: GoodsStatus? = null
+    var status: GoodsStatus = GoodsStatus.ACTIVE
         protected set
 
     @field:CreatedDate
@@ -65,11 +67,11 @@ class Goods protected constructor() {
         updatedAt: LocalDateTime?,
     ) : this() {
         this.id = id
-        this.name = name
+        this.name = name ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
         this.description = description
-        this.price = price
+        this.price = price ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
         this.imageUrl = imageUrl
-        this.status = status
+        this.status = status ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
         this.createdAt = createdAt
         this.updatedAt = updatedAt
     }
@@ -83,11 +85,11 @@ class Goods protected constructor() {
         status: GoodsStatus?,
     ) : this() {
         this.id = id
-        this.name = name
+        this.name = name ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
         this.description = description
-        this.price = price
+        this.price = price ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
         this.imageUrl = imageUrl
-        this.status = status
+        this.status = status ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
     }
 
     fun updateGoodsInfo(
@@ -96,6 +98,9 @@ class Goods protected constructor() {
         price: Int?,
         imageUrl: String?,
     ) {
+        if (name == null || price == null) {
+            throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
+        }
         this.name = name
         this.description = description
         this.price = price
@@ -103,7 +108,7 @@ class Goods protected constructor() {
     }
 
     fun updateGoodsStatus(status: GoodsStatus?) {
-        this.status = status
+        this.status = status ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
     }
 
     fun deactivate() {
