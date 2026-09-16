@@ -25,7 +25,10 @@ class CustomOAuth2UserService(
         val nameAttributeKey = registration.providerDetails.userInfoEndpoint.userNameAttributeName
         val provider = AuthProvider.from(registration.registrationId)
         val info = OAuth2UserInfoFactory.of(provider, oauthUser.attributes)
-        val kakaoId = requireNotNull(info.id()) { "OAuth2 사용자 식별자가 없습니다." }
+        val kakaoId = info.id() ?: throw OAuth2AuthenticationException(
+            OAuth2Error("kakao_id_required"),
+            "SNS 계정에서 사용자 식별자를 가져오지 못했습니다.",
+        )
         if (info.email() == null) {
             throw OAuth2AuthenticationException(
                 OAuth2Error("email_required"),
