@@ -46,11 +46,11 @@ class InternalCsController(
     fun getPaymentStatus(@PathVariable orderId: String): ResponseEntity<CsPaymentStatusResponse> {
         val result = paymentService.getStatus(orderId)
         val response = CsPaymentStatusResponse(
-            result.orderId(),
-            result.purchaseId(),
-            result.purchaseStatus(),
-            result.paymentStatus(),
-            result.amount()
+            result.orderId,
+            result.purchaseId,
+            result.purchaseStatus,
+            result.paymentStatus,
+            result.amount
         )
         return ResponseEntity.ok(response)
     }
