@@ -1,4 +1,4 @@
-package com.team3.gudit.domain.goods.service;
+package com.team3.gudit.goods.service;
 
 import com.team3.gudit.global.exception.BusinessException;
 import com.team3.gudit.goods.domain.entity.Goods;
