@@ -4,10 +4,16 @@ param(
     [string]$Scenario,
 
     [string]$BaseUrl = "http://localhost:8080",
-    [string]$P95Milliseconds = ""
+    [string]$P95Milliseconds = "",
+    [string]$DatabaseContainer = "gudit-performance-postgres",
+    [string]$Database = "gudit",
+    [string]$DatabaseUser = "postgres",
+    [string]$RedisContainer = "gudit-performance-redis",
+    [int]$RedisDatabase = 0
 )
 
 $ErrorActionPreference = "Stop"
+if ($RedisDatabase -lt 0) { throw "RedisDatabase cannot be negative." }
 
 $suiteRoot = Split-Path $PSScriptRoot -Parent
 
@@ -38,7 +44,11 @@ Write-Host (
 
 & $prepareScript `
     -ResetPerformanceDatabase `
-    -Scenario $Scenario
+    -Scenario $Scenario `
+    -Container $DatabaseContainer `
+    -Database $Database `
+    -DatabaseUser $DatabaseUser `
+    -RedisContainer $RedisContainer
 
 Write-Host (
     "[2/2] Running k6 scenario: " +
@@ -66,14 +76,58 @@ if ($LASTEXITCODE -ne 0) {
     throw "k6 scenario $Scenario failed."
 }
 
+function Wait-RedisStock {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Key,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedValue,
+
+        [int]$TimeoutSeconds = 30,
+        [int]$PollMilliseconds = 500
+    )
+
+    $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
+    $lastValue = $null
+
+    do {
+        $redisValue = & docker exec `
+            $RedisContainer `
+            redis-cli `
+            -n $RedisDatabase `
+            GET `
+            $Key
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Redis stock lookup failed: key=$Key"
+        }
+
+        $lastValue = if ($null -eq $redisValue) {
+            $null
+        }
+        else {
+            "$redisValue".Trim()
+        }
+
+        if ($lastValue -eq $ExpectedValue) {
+            return $lastValue
+        }
+
+        Start-Sleep -Milliseconds $PollMilliseconds
+    } while ([DateTimeOffset]::UtcNow -lt $deadline)
+
+    return $lastValue
+}
+
 if ($Scenario -eq "6") {
     Write-Host "Verifying payment fixture"
 
     $paymentState = & docker exec `
-        gudit-performance-postgres `
+        $DatabaseContainer `
         psql `
-        -U postgres `
-        -d gudit `
+        -U $DatabaseUser `
+        -d $Database `
         -t `
         -A `
         -F "|" `
@@ -103,10 +157,10 @@ if ($Scenario -eq "7") {
     Write-Host "Verifying payment-confirm-cancel race fixture"
 
     $databaseState = & docker exec `
-        gudit-performance-postgres `
+        $DatabaseContainer `
         psql `
-        -U postgres `
-        -d gudit `
+        -U $DatabaseUser `
+        -d $Database `
         -t `
         -A `
         -F "|" `
@@ -126,27 +180,26 @@ WHERE p.id = 3;
 
     $databaseState = $databaseState.Trim()
 
-    $redisStock = & docker exec `
-        gudit-performance-redis `
-        redis-cli `
-        GET `
-        "sale:106:stock"
+    if ($databaseState -eq "PURCHASED|DONE") {
+        $redisStock = Wait-RedisStock `
+            -Key "sale:106:stock" `
+            -ExpectedValue "99"
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Payment-confirm-cancel Redis stock verification failed."
+        $isConsistent = $redisStock -eq "99"
+    }
+    elseif ($databaseState -eq "CANCELED|CANCELED") {
+        $redisStock = Wait-RedisStock `
+            -Key "sale:106:stock" `
+            -ExpectedValue "100"
+
+        $isConsistent = $redisStock -eq "100"
+    }
+    else {
+        $redisStock = "unknown"
+        $isConsistent = $false
     }
 
-    $redisStock = $redisStock.Trim()
-
-    $purchasedState =
-        $databaseState -eq "PURCHASED|DONE" `
-        -and $redisStock -eq "99"
-
-    $canceledState =
-        $databaseState -eq "CANCELED|CANCELED" `
-        -and $redisStock -eq "100"
-
-    if (-not ($purchasedState -or $canceledState)) {
+    if (-not $isConsistent) {
         throw (
             "Payment-confirm-cancel final state is inconsistent. " +
             "database=$databaseState, redisStock=$redisStock"

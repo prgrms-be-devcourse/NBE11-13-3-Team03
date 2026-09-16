@@ -61,6 +61,46 @@ if ($LASTEXITCODE -ne 0) {
     throw "Performance Redis reset failed."
 }
 
+$streamGroups = @(
+    @{
+        Stream = "stream:stock-restore"
+        Group = "stock-restore-group"
+    },
+    @{
+        Stream = "stream:payment-compensation"
+        Group = "payment-compensation-group"
+    }
+)
+
+foreach ($streamGroup in $streamGroups) {
+    $groupCreateResult = & docker exec `
+        $RedisContainer `
+        redis-cli `
+        XGROUP CREATE `
+        $streamGroup.Stream `
+        $streamGroup.Group `
+        "0-0" `
+        MKSTREAM 2>&1
+
+    if (
+        $LASTEXITCODE -ne 0 `
+        -and "$groupCreateResult" -notmatch "BUSYGROUP"
+    ) {
+        throw (
+            "Redis Stream Consumer Group 생성에 실패했습니다: " +
+            "stream=$($streamGroup.Stream), " +
+            "group=$($streamGroup.Group), " +
+            "error=$groupCreateResult"
+        )
+    }
+
+    Write-Host (
+        "Redis Stream Consumer Group 준비 완료: " +
+        "stream=$($streamGroup.Stream), " +
+        "group=$($streamGroup.Group)"
+    )
+}
+
 $fixturePath = Join-Path `
     $dataDirectory `
     "generated/performance-test-data.json"
