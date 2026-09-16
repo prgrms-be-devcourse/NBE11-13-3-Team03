@@ -2,6 +2,7 @@ package com.team3.gudit.sale.controller;
 
 import tools.jackson.databind.ObjectMapper;
 import com.team3.gudit.auth.jwt.TokenProvider;
+import com.team3.gudit.auth.security.CustomUserDetails;
 import com.team3.gudit.global.exception.BusinessException;
 import com.team3.gudit.sale.domain.enums.SaleStatus;
 import com.team3.gudit.sale.dto.reqeust.SaleCreateRequestDto;
@@ -11,18 +12,24 @@ import com.team3.gudit.sale.dto.response.SaleCreateResponseDto;
 import com.team3.gudit.sale.dto.response.SaleDetailResponseDto;
 import com.team3.gudit.sale.exception.SaleErrorCode;
 import com.team3.gudit.sale.service.SaleService;
+import com.team3.gudit.user.domain.entity.Role;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
@@ -46,10 +53,24 @@ class SaleApiControllerTest {
     @MockitoBean
     private TokenProvider tokenProvider;
 
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     @DisplayName("올바른 판매 생성 요청은 201 응답을 반환한다")
     void createSale() throws Exception {
         // given
+        long adminUserId = 7L;
+        CustomUserDetails adminUser = new CustomUserDetails(adminUserId, Role.ADMIN);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        adminUser,
+                        null,
+                        adminUser.getAuthorities()
+                )
+        );
         LocalDateTime startAt =
                 LocalDateTime.of(2026, 8, 20, 10, 0);
         LocalDateTime endAt =
@@ -73,7 +94,7 @@ class SaleApiControllerTest {
                         endAt
                 );
 
-        given(saleService.createSale(any()))
+        given(saleService.createSale(any(), eq(adminUserId)))
                 .willReturn(response);
 
         // when & then
@@ -85,7 +106,7 @@ class SaleApiControllerTest {
                 .andExpect(jsonPath("$.initialStock").value(100))
                 .andExpect(jsonPath("$.maxPurchaseQuantity").value(2));
 
-        verify(saleService).createSale(any());
+        verify(saleService).createSale(any(), eq(adminUserId));
     }
 
     @Test
@@ -113,7 +134,7 @@ class SaleApiControllerTest {
                 ).value("초기 재고는 1개 이상이어야 합니다."));
 
         verify(saleService, never())
-                .createSale(any());
+                .createSale(any(), anyLong());
     }
 
     @Test
@@ -150,7 +171,7 @@ class SaleApiControllerTest {
                         .exists());
 
         verify(saleService, never())
-                .createSale(any());
+                .createSale(any(), anyLong());
     }
 
     @Test

@@ -15,6 +15,42 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 class SaleTest {
     @Test
+    @DisplayName("상품 없는 판매는 생성 단계에서 공통 입력 오류로 거절된다")
+    void rejectSaleWithoutGoods() {
+        LocalDateTime startAt = LocalDateTime.now();
+        assertThatThrownBy(() -> Sale.builder()
+                .initialStock(100)
+                .maxPurchaseQuantity(2)
+                .startAt(startAt)
+                .endAt(startAt.plusHours(1))
+                .build())
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).getErrorCode())
+                        .isEqualTo(com.team3.gudit.global.exception.GlobalErrorCode.INVALID_INPUT_VALUE));
+    }
+
+    @Test
+    @DisplayName("null 상태 변경은 거절하고 기존 판매 상태를 유지한다")
+    void rejectNullStatusWithoutChangingSale() {
+        LocalDateTime startAt = LocalDateTime.now();
+        Sale sale = Sale.builder()
+                .goods(Goods.of("상품", null, 1000, null))
+                .initialStock(100)
+                .maxPurchaseQuantity(2)
+                .startAt(startAt)
+                .endAt(startAt.plusHours(1))
+                .build();
+        assertThatThrownBy(() -> sale.updateSaleStatus(null))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).getErrorCode())
+                        .isEqualTo(SaleErrorCode.INVALID_STATUS_TRANSITION));
+        assertThat(sale.getStatus()).isEqualTo(SaleStatus.READY);
+        sale.decreaseStock(2);
+        sale.restoreStock(2);
+        assertThat(sale.getRemainingStock()).isEqualTo(100);
+    }
+
+    @Test
     @DisplayName("판매 생성 시 남은 재고는 초기 재고로 설정되고 상태는 READY로 초기화된다")
     void createSale() {
         // given
