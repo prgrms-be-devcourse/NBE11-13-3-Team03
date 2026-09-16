@@ -23,10 +23,7 @@ public class TokenProviderTest {
 
     @BeforeEach
     public void setUp() {
-        user = User.builder()
-                .id(1L)
-                .role(Role.USER)
-                .build();
+        user = new User(1L, null, null, null, Role.USER, com.team3.gudit.auth.oauth2.AuthProvider.KAKAO, null, null);
     }
 
     @Test

@@ -37,12 +37,7 @@ class AuthenticationIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        user = User.builder()
-                .kakaoId(12345L)
-                .role(Role.USER)
-                .nickname("testUser")
-                .email("test@example.com")
-                .build();
+        user = new User(null, 12345L, "testUser", "test@example.com", Role.USER, com.team3.gudit.auth.oauth2.AuthProvider.KAKAO, null, null);
 
         user = userRepository.saveAndFlush(user);
     }

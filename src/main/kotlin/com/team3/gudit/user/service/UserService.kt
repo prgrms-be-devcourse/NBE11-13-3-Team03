@@ -1,0 +1,36 @@
+package com.team3.gudit.user.service
+
+import com.team3.gudit.global.exception.BusinessException
+import com.team3.gudit.user.domain.repository.UserRepository
+import com.team3.gudit.user.dto.UserMeResponseDto
+import com.team3.gudit.user.exception.UserErrorCode
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+
+@Service
+class UserService(
+    private val userRepository: UserRepository,
+) {
+    @Operation(
+        summary = "내 정보 조회",
+        description = "현재 로그인한 사용자의 정보를 조회합니다.\n\nAccess Token을 통해 인증된 사용자의 정보를 반환합니다.\n",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "내 정보 조회 성공"),
+            ApiResponse(responseCode = "401", description = "Access Token이 없거나 유효하지 않은 경우"),
+            ApiResponse(responseCode = "404", description = "사용자 정보를 찾을 수 없는 경우"),
+        ],
+    )
+    @SecurityRequirement(name = "accessCookie")
+    @Transactional(readOnly = true)
+    fun getMyInfo(userId: Long): UserMeResponseDto {
+        val user = userRepository.findById(userId)
+            .orElseThrow { BusinessException(UserErrorCode.USER_NOT_FOUND) }
+        return UserMeResponseDto.from(user)
+    }
+}
