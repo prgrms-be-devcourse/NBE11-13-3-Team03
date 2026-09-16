@@ -90,6 +90,50 @@ function Verify-PaymentConfirmRace {
     }
 }
 
+function Wait-RedisStock {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Key,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedValue,
+
+        [int]$TimeoutSeconds = 30,
+        [int]$PollMilliseconds = 500
+    )
+
+    $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
+    $lastValue = $null
+
+    do {
+        $redisValue = & docker exec `
+            $RedisContainer `
+            redis-cli `
+            -n $RedisDatabase `
+            GET `
+            $Key
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Redis 재고 조회에 실패했습니다: key=$Key"
+        }
+
+        $lastValue = if ($null -eq $redisValue) {
+            $null
+        }
+        else {
+            "$redisValue".Trim()
+        }
+
+        if ($lastValue -eq $ExpectedValue) {
+            return $lastValue
+        }
+
+        Start-Sleep -Milliseconds $PollMilliseconds
+    } while ([DateTimeOffset]::UtcNow -lt $deadline)
+
+    return $lastValue
+}
+
 function Verify-PaymentConfirmCancelRace {
     $databaseState = & docker exec `
         $DatabaseContainer `
@@ -112,31 +156,38 @@ WHERE p.id = 3;
         throw "시나리오 7 DB 상태 검증 쿼리에 실패했습니다."
     }
 
-    $redisStock = & docker exec `
-        $RedisContainer `
-        redis-cli `
-        -n $RedisDatabase `
-        GET `
-        "sale:106:stock"
-    if ($LASTEXITCODE -ne 0) {
-        throw "시나리오 7 Redis 재고 검증에 실패했습니다."
+    $databaseState = $databaseState.Trim()
+
+    if ($databaseState -eq "PURCHASED|DONE") {
+        $redisStock = Wait-RedisStock `
+            -Key "sale:106:stock" `
+            -ExpectedValue "99"
+
+        $isConsistent = $redisStock -eq "99"
+    }
+    elseif ($databaseState -eq "CANCELED|CANCELED") {
+        $redisStock = Wait-RedisStock `
+            -Key "sale:106:stock" `
+            -ExpectedValue "100"
+
+        $isConsistent = $redisStock -eq "100"
+    }
+    else {
+        $redisStock = "unknown"
+        $isConsistent = $false
     }
 
-    $databaseState = $databaseState.Trim()
-    $redisStock = $redisStock.Trim()
-    $purchasedState =
-        $databaseState -eq "PURCHASED|DONE" `
-        -and $redisStock -eq "99"
-    $canceledState =
-        $databaseState -eq "CANCELED|CANCELED" `
-        -and $redisStock -eq "100"
-
-    if (-not ($purchasedState -or $canceledState)) {
+    if (-not $isConsistent) {
         throw (
             "시나리오 7 최종 상태가 일관되지 않습니다: " +
             "database=$databaseState, redisStock=$redisStock"
         )
     }
+
+    Write-Host (
+        "시나리오 7 최종 상태 검증 완료: " +
+        "database=$databaseState, redisStock=$redisStock"
+    )
 }
 
 $failed = @()

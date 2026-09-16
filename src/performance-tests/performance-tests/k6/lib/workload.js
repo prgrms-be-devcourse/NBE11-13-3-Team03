@@ -24,12 +24,17 @@ export function runReadIteration(iteration) {
   // 50% sale list, 35% sale detail, 15% authenticated purchase history.
   if (selector < 10) {
     const response = getSales(actor);
-    record(response, saleListDuration, "sale list", (body) => Array.isArray(body) && body.length === 104);
+    record(
+      response,
+      saleListDuration,
+      "sale list",
+      (body) => Array.isArray(body) && body.length === 106
+    );
     return;
   }
 
   if (selector < 17) {
-    const saleId = 1 + (Number(iteration) % 104);
+    const saleId = 1 + (Number(iteration) % 106);
     const response = getSale(saleId, actor);
     record(response, saleDetailDuration, "sale detail", (body) => body?.id === saleId);
     return;

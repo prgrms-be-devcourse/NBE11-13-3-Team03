@@ -1,7 +1,7 @@
 import { actorForUser } from "../lib/data.js";
 import { cancelPurchase } from "../lib/client.js";
 import { commonThresholds, record } from "../lib/metrics.js";
-import { verifyPurchaseStatus, verifySale } from "../lib/verify.js";
+import { verifyPurchaseStatus, verifySaleEventually } from "../lib/verify.js";
 
 const P95_MS = Number(__ENV.P95_MS || 2000);
 
@@ -30,5 +30,5 @@ export default function () {
 export function teardown() {
   const actor = actorForUser(1002);
   verifyPurchaseStatus(actor, 1, "CANCELED");
-  verifySale(actor, 104, 100, "ON_SALE");
+  verifySaleEventually(actor, 104, 100, "ON_SALE");
 }
