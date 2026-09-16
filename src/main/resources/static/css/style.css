@@ -1204,6 +1204,170 @@ a {
     background: var(--primary-soft);
 }
 
+.purchase-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cs-inquiry-button {
+    min-width: 86px;
+    height: 38px;
+
+    flex-shrink: 0;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+
+    color: var(--primary);
+    background: #ffffff;
+
+    cursor: pointer;
+
+    transition:
+            color 0.2s ease,
+            background 0.2s ease;
+}
+
+.cs-inquiry-button:hover {
+    color: #ffffff;
+    background: var(--primary);
+}
+
+.cs-inquiry-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+
+    background: rgba(31, 41, 55, 0.4);
+}
+
+.cs-inquiry-modal.open {
+    display: flex;
+}
+
+.cs-inquiry-modal-content {
+    width: min(100%, 480px);
+
+    padding: 28px;
+
+    border: 1px solid var(--border);
+    border-radius: 18px;
+
+    background: var(--bg-card);
+
+    box-shadow:
+            0 20px 50px rgba(31, 41, 55, 0.15);
+}
+
+.cs-inquiry-modal-content h2 {
+    font-size: 21px;
+    letter-spacing: -0.5px;
+}
+
+.cs-inquiry-modal-content p {
+    margin-top: 10px;
+
+    font-size: 13px;
+    line-height: 1.6;
+
+    color: var(--text-sub);
+}
+
+.cs-inquiry-modal-content textarea {
+    width: 100%;
+    min-height: 140px;
+
+    margin-top: 20px;
+    padding: 14px;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.6;
+
+    color: var(--text-main);
+    background: #ffffff;
+
+    resize: vertical;
+    outline: none;
+}
+
+.cs-inquiry-modal-content textarea:focus {
+    border-color: var(--primary);
+
+    box-shadow:
+            0 0 0 3px rgba(103, 169, 220, 0.12);
+}
+
+.cs-inquiry-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+
+    margin-top: 20px;
+}
+
+#cs-inquiry-cancel,
+#cs-inquiry-submit {
+    min-width: 90px;
+    height: 40px;
+
+    border-radius: 8px;
+
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+#cs-inquiry-cancel {
+    border: 1px solid var(--border);
+
+    color: var(--text-sub);
+    background: #ffffff;
+}
+
+#cs-inquiry-cancel:hover {
+    border-color: var(--primary);
+
+    color: var(--primary);
+    background: var(--primary-soft);
+}
+
+#cs-inquiry-submit {
+    border: 0;
+
+    color: #ffffff;
+    background: var(--primary);
+}
+
+#cs-inquiry-submit:hover {
+    background: var(--primary-hover);
+}
+
+#cs-inquiry-submit:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
 /* Metadata */
 
 .purchase-item-meta {
@@ -2538,6 +2702,15 @@ body:has(.admin-page) {
     }
 
     .detail-link-button {
+        width: 100%;
+    }
+
+    .purchase-item-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .cs-inquiry-button {
         width: 100%;
     }
 

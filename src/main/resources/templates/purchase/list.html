@@ -20,7 +20,9 @@
         <p>구매한 굿즈와 현재 구매 상태를 확인할 수 있습니다.</p>
     </section>
 
-    <section class="purchase-filter" aria-label="구매 상태 필터">
+    <section
+            class="purchase-filter"
+            aria-label="구매 상태 필터">
 
         <button
                 type="button"
@@ -59,6 +61,44 @@
     </section>
 
 </main>
+
+<div
+        id="cs-inquiry-modal"
+        class="cs-inquiry-modal">
+
+    <div class="cs-inquiry-modal-content">
+
+        <h2>구매 문의</h2>
+
+        <p>
+            선택한 구매 건에 대한 문의 내용을 입력해주세요.
+        </p>
+
+        <textarea
+                id="cs-inquiry-message"
+                rows="6"
+                maxlength="1000"
+                placeholder="문의 내용을 입력해주세요."></textarea>
+
+        <div class="cs-inquiry-modal-actions">
+
+            <button
+                    type="button"
+                    id="cs-inquiry-cancel">
+                취소
+            </button>
+
+            <button
+                    type="button"
+                    id="cs-inquiry-submit">
+                문의 접수
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
 
 <script src="/js/purchase/list.js"></script>
 

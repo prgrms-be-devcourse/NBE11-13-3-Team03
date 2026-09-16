@@ -1,5 +1,6 @@
 package com.team3.gudit.auth
 
+import com.team3.gudit.auth.filter.InternalApiKeyFilter
 import com.team3.gudit.auth.filter.TokenAuthenticationFilter
 import com.team3.gudit.auth.oauth2.CustomAuthorizationRequestResolver
 import com.team3.gudit.auth.oauth2.OAuth2FailureHandler
@@ -23,6 +24,7 @@ class SecurityConfig(
     private val oAuth2SuccessHandler: OAuth2SuccessHandler,
     private val oAuth2FailureHandler: OAuth2FailureHandler,
     private val tokenAuthenticationFilter: TokenAuthenticationFilter,
+    private val internalApiKeyFilter: InternalApiKeyFilter,
     private val authenticationEntryPoint: CustomAuthenticationEntryPoint,
     private val customAuthorizationRequestResolver: CustomAuthorizationRequestResolver,
     private val traceIdFilter: TraceIdFilter,
@@ -48,6 +50,8 @@ class SecurityConfig(
                 ).permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/internal/performance-probe/server-error", "/api/internal/performance-probe/slow-response").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/internal/performance-probe/rollback-failure").permitAll()
+                    // 내부 API는 InternalApiKeyFilter에서 별도로 인증한다.
+                    .requestMatchers("/api/internal/**").permitAll()
                     // 판매 조회
                     .requestMatchers(HttpMethod.GET, "/api/sales", "/api/sales/**").permitAll()
                     // 관리자 화면 / 상품 관리
@@ -68,6 +72,7 @@ class SecurityConfig(
             .exceptionHandling {
                 it.defaultAuthenticationEntryPointFor(authenticationEntryPoint, PathPatternRequestMatcher.withDefaults().matcher("/api/**"))
             }
+            .addFilterBefore(internalApiKeyFilter, UsernamePasswordAuthenticationFilter::class.java)
             .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .addFilterBefore(traceIdFilter, TokenAuthenticationFilter::class.java)
         return http.build()
