@@ -74,7 +74,7 @@ class SaleApiController(
         ],
     )
     @GetMapping("/{saleId}")
-    fun getSaleDetail(@PathVariable saleId: Long?): ResponseEntity<SaleDetailResponseDto> {
+    fun getSaleDetail(@PathVariable saleId: Long): ResponseEntity<SaleDetailResponseDto> {
         val response = saleService.saleDetail(saleId)
         return ResponseEntity.ok(response)
     }

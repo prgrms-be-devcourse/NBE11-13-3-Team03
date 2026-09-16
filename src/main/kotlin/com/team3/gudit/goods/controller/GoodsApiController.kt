@@ -84,7 +84,7 @@ class GoodsApiController(
         ],
     )
     @GetMapping("/{goodsId}")
-    fun getGoods(@PathVariable goodsId: Long?): ResponseEntity<GoodsDetailResponse> {
+    fun getGoods(@PathVariable goodsId: Long): ResponseEntity<GoodsDetailResponse> {
         val response = goodsService.goodsDetail(goodsId)
         return ResponseEntity.ok(response)
     }
