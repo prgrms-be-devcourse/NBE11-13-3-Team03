@@ -60,7 +60,7 @@ class GoodsService(
     @Transactional(readOnly = true)
     fun goodsDetail(id: Long?): GoodsDetailResponse {
         val goods =
-            goodsRepository.findByIdAndStatus(id, GoodsStatus.ACTIVE)
+            goodsRepository.findByIdAndStatus(requiredId(id), GoodsStatus.ACTIVE)
                 .orElseThrow { BusinessException(GoodsErrorCode.GOODS_NOT_FOUND) }
         return goodsMapper.toDetailResponse(goods)
     }

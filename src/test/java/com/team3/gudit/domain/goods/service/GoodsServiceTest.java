@@ -26,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -166,6 +167,16 @@ class GoodsServiceTest {
             // when & then
             assertThatThrownBy(() -> goodsService.goodsDetail(goodsId))
                     .isInstanceOf(BusinessException.class);
+        }
+
+        @Test
+        @DisplayName("굿즈 ID가 null이면 저장소를 조회하지 않고 예외가 발생한다.")
+        void goodsDetail_nullId_throwsException() {
+            assertThatThrownBy(() -> goodsService.goodsDetail(null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("The given id must not be null");
+
+            verify(goodsRepository, never()).findByIdAndStatus(anyLong(), any());
         }
     }
 

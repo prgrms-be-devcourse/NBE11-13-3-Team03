@@ -9,7 +9,7 @@ interface GoodsRepository : JpaRepository<Goods, Long> {
     fun findAllByStatus(status: GoodsStatus): List<Goods>
 
     fun findByIdAndStatus(
-        id: Long?,
+        id: Long,
         status: GoodsStatus,
     ): Optional<Goods>
 }
