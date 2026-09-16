@@ -4,7 +4,6 @@ import com.team3.gudit.auth.exception.AuthErrorCode;
 import com.team3.gudit.auth.jwt.TokenProvider;
 import com.team3.gudit.auth.jwt.TokenStatus;
 import com.team3.gudit.auth.jwt.TokenType;
-import com.team3.gudit.user.domain.entity.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -12,7 +11,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -26,6 +24,11 @@ import java.io.IOException;
 public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     private final TokenProvider tokenProvider;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return request.getRequestURI().startsWith("/api/internal/");
+    }
 
     @Override
     protected void doFilterInternal(
