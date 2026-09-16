@@ -54,6 +54,10 @@ class TokenServiceTest(
         `when`(tokenProvider.generateToken(user, REFRESH_VALIDITY, TokenType.REFRESH)).thenReturn(REFRESH_TOKEN)
         `when`(refreshTokenHasher.hash(REFRESH_TOKEN)).thenReturn(STORED_HASH)
         `when`(refreshTokenRepository.findByUserId(USER_ID)).thenReturn(Optional.empty())
+        // Spring Data save의 non-null 반환 계약을 실제 저장소와 동일하게 설정한다.
+        doAnswer { invocation -> invocation.getArgument<RefreshToken>(0) }
+            .`when`(refreshTokenRepository)
+            .save(any(RefreshToken::class.java) ?: RefreshToken(user, STORED_HASH, LocalDateTime.now()))
 
         // when
         val result = tokenService.issueToken(user)
