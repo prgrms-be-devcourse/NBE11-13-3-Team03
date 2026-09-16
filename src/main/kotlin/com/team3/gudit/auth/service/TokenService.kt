@@ -60,11 +60,7 @@ class TokenService(
         if (existingToken.isPresent) {
             existingToken.get().rotate(tokenHash, expiresAt)
         } else {
-            val newToken = RefreshToken.builder()
-                .user(user)
-                .tokenHash(tokenHash)
-                .expiresAt(expiresAt)
-                .build()
+            val newToken = RefreshToken(user, tokenHash, expiresAt)
             refreshTokenRepository.save(newToken)
         }
         refreshTokenCacheRepository.save(user.id, tokenHash, Duration.between(now, expiresAt))
