@@ -9,7 +9,10 @@ import com.team3.gudit.sale.dto.response.SaleListResponseDto
 import com.team3.gudit.sale.dto.response.SaleStatusUpdateResponseDto
 
 interface SaleService {
-    fun createSale(request: SaleCreateRequestDto): SaleCreateResponseDto
+    fun createSale(
+        request: SaleCreateRequestDto,
+        createdBy: Long,
+    ): SaleCreateResponseDto
 
     fun saleDetail(id: Long?): SaleDetailResponseDto
 

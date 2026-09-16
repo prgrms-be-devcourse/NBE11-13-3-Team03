@@ -1,5 +1,6 @@
 package com.team3.gudit.sale.controller
 
+import com.team3.gudit.auth.security.CustomUserDetails
 import com.team3.gudit.sale.dto.reqeust.SaleCreateRequestDto
 import com.team3.gudit.sale.dto.reqeust.SaleStatusUpdateRequestDto
 import com.team3.gudit.sale.dto.reqeust.SaleUpdateRequestDto
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -54,9 +56,10 @@ class SaleApiController(
     @SecurityRequirement(name = "cookieAuth")
     @PostMapping
     fun createSale(
+        @AuthenticationPrincipal userDetails: CustomUserDetails,
         @Valid @RequestBody request: SaleCreateRequestDto,
     ): ResponseEntity<SaleCreateResponseDto> {
-        val response = saleService.createSale(request)
+        val response = saleService.createSale(request, userDetails.userId)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 

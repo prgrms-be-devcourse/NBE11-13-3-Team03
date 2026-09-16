@@ -173,8 +173,7 @@ class GoodsServiceTest {
         @DisplayName("굿즈 ID가 null이면 저장소를 조회하지 않고 예외가 발생한다.")
         void goodsDetail_nullId_throwsException() {
             assertThatThrownBy(() -> goodsService.goodsDetail(null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("The given id must not be null");
+                    .isInstanceOf(BusinessException.class);
 
             verify(goodsRepository, never()).findByIdAndStatus(anyLong(), any());
         }

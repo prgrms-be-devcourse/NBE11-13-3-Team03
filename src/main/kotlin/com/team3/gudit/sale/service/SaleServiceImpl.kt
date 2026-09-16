@@ -35,12 +35,15 @@ class SaleServiceImpl(
     private val purchaseRepository: PurchaseRepository,
 ) : SaleService {
     @Transactional
-    override fun createSale(request: SaleCreateRequestDto): SaleCreateResponseDto {
+    override fun createSale(
+        request: SaleCreateRequestDto,
+        createdBy: Long,
+    ): SaleCreateResponseDto {
         val goods =
             goodsRepository.findById(requiredId(request.goodsId))
                 .orElseThrow { BusinessException(GoodsErrorCode.GOODS_NOT_FOUND) }
 
-        val sale = request.toEntity(goods)
+        val sale = request.toEntity(goods, createdBy)
         val savedSale = saleRepository.save(sale)
 
         return SaleCreateResponseDto.from(savedSale)
@@ -369,7 +372,7 @@ class SaleServiceImpl(
     }
 
     private fun requiredId(id: Long?): Long =
-        id ?: throw IllegalArgumentException("The given id must not be null")
+        id ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
 
     companion object {
         private val log = LoggerFactory.getLogger(SaleServiceImpl::class.java)

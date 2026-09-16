@@ -1,6 +1,7 @@
 package com.team3.gudit.goods.service
 
 import com.team3.gudit.global.exception.BusinessException
+import com.team3.gudit.global.exception.GlobalErrorCode
 import com.team3.gudit.goods.domain.entity.Goods
 import com.team3.gudit.goods.domain.enums.GoodsStatus
 import com.team3.gudit.goods.domain.repository.GoodsRepository
@@ -125,7 +126,7 @@ class GoodsService(
     }
 
     private fun requiredId(id: Long?): Long =
-        id ?: throw IllegalArgumentException("The given id must not be null")
+        id ?: throw BusinessException(GlobalErrorCode.INVALID_INPUT_VALUE)
 
     companion object {
         private val log = LoggerFactory.getLogger(GoodsService::class.java)

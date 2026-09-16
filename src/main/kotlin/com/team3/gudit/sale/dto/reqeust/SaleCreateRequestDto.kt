@@ -28,9 +28,13 @@ data class SaleCreateRequestDto(
     @param:JsonFormat(pattern = DateformatConstant.DATE_FORMAT)
     val endAt: LocalDateTime?,
 ) {
-    fun toEntity(goods: Goods): Sale =
+    fun toEntity(
+        goods: Goods,
+        createdBy: Long,
+    ): Sale =
         Sale.builder()
             .goods(goods)
+            .createdBy(createdBy)
             .initialStock(initialStock)
             .remainingStock(initialStock)
             .maxPurchaseQuantity(maxPurchaseQuantity)
