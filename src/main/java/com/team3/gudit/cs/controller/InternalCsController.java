@@ -41,7 +41,7 @@ public class InternalCsController {
                     description = "결제 정보를 찾을 수 없음"
             )
     })
-    @GetMapping("/payments/{orderId}/cs-status")
+    @GetMapping("/{orderId}/cs-status")
     public ResponseEntity<CsPaymentStatusResponse> getPaymentStatus(
             @PathVariable String orderId
     ) {
