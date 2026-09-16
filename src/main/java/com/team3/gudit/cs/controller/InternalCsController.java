@@ -1,6 +1,7 @@
 package com.team3.gudit.cs.controller;
 
 import com.team3.gudit.cs.dto.CsPaymentStatusResponse;
+import com.team3.gudit.payment.dto.PaymentStatusResult;
 import com.team3.gudit.payment.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -40,12 +41,21 @@ public class InternalCsController {
                     description = "결제 정보를 찾을 수 없음"
             )
     })
-    @GetMapping("/{orderId}/cs-status")
-    public ResponseEntity<CsPaymentStatusResponse> getCsStatus(
+    @GetMapping("/payments/{orderId}/cs-status")
+    public ResponseEntity<CsPaymentStatusResponse> getPaymentStatus(
             @PathVariable String orderId
     ) {
+        PaymentStatusResult result =
+                paymentService.getStatus(orderId);
+
         CsPaymentStatusResponse response =
-                paymentService.getCsStatus(orderId);
+                new CsPaymentStatusResponse(
+                        result.orderId(),
+                        result.purchaseId(),
+                        result.purchaseStatus(),
+                        result.paymentStatus(),
+                        result.amount()
+                );
 
         return ResponseEntity.ok(response);
     }

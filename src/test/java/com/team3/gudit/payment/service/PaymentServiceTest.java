@@ -1,6 +1,5 @@
 package com.team3.gudit.payment.service;
 
-import com.team3.gudit.cs.dto.CsPaymentStatusResponse;
 import com.team3.gudit.global.exception.BusinessException;
 import com.team3.gudit.payment.client.TossPaymentClient;
 import com.team3.gudit.payment.dto.*;
@@ -618,7 +617,7 @@ class PaymentServiceTest {
 
     @Test
     @DisplayName("주문번호로 결제와 구매 상태를 조회한다")
-    void getCsStatus() {
+    void getStatus() {
         // given
         String orderId = "GUDIT_test-order-id";
 
@@ -647,8 +646,8 @@ class PaymentServiceTest {
                 .willReturn(PurchaseStatus.PURCHASED);
 
         // when
-        CsPaymentStatusResponse response =
-                paymentService.getCsStatus(orderId);
+        PaymentStatusResult response =
+                paymentService.getStatus(orderId);
 
         // then
         assertThat(response.orderId())
@@ -672,7 +671,7 @@ class PaymentServiceTest {
 
     @Test
     @DisplayName("주문번호에 해당하는 결제가 없으면 예외가 발생한다")
-    void getCsStatusNotFound() {
+    void getStatusNotFound() {
         // given
         String orderId = "GUDIT_not-found";
 
@@ -681,7 +680,7 @@ class PaymentServiceTest {
 
         // when & then
         assertThatThrownBy(
-                () -> paymentService.getCsStatus(orderId)
+                () -> paymentService.getStatus(orderId)
         )
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {

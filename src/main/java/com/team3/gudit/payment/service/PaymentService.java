@@ -2,11 +2,7 @@ package com.team3.gudit.payment.service;
 
 import com.team3.gudit.global.exception.BusinessException;
 import com.team3.gudit.payment.client.TossPaymentClient;
-import com.team3.gudit.payment.dto.PaymentConfirmRequest;
-import com.team3.gudit.cs.dto.CsPaymentStatusResponse;
-import com.team3.gudit.payment.dto.TossPaymentCancelRequest;
-import com.team3.gudit.payment.dto.TossPaymentConfirmRequest;
-import com.team3.gudit.payment.dto.TossPaymentResponse;
+import com.team3.gudit.payment.dto.*;
 import com.team3.gudit.payment.entity.Payment;
 import com.team3.gudit.payment.exception.PaymentErrorCode;
 import com.team3.gudit.payment.exception.TossPaymentException;
@@ -134,7 +130,7 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public CsPaymentStatusResponse getCsStatus(String orderId) {
+    public PaymentStatusResult getStatus(String orderId) {
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .orElseThrow(() ->
                         new BusinessException(
@@ -145,7 +141,7 @@ public class PaymentService {
 
         Purchase purchase = payment.getPurchase();
 
-        return new CsPaymentStatusResponse(
+        return new PaymentStatusResult(
                 payment.getOrderId(),
                 purchase.getId(),
                 purchase.getStatus(),
