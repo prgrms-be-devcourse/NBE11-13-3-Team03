@@ -1,5 +1,6 @@
 package com.team3.gudit.purchase.repository
 
+import com.team3.gudit.auth.oauth2.AuthProvider
 import com.team3.gudit.goods.config.JpaConfig
 import com.team3.gudit.goods.domain.entity.Goods
 import com.team3.gudit.purchase.entity.Purchase
@@ -188,12 +189,16 @@ class PurchaseRepositoryTest {
     }
 
     private fun saveTestData(): TestData {
-        val user = User.builder()
-            .kakaoId(System.nanoTime())
-            .nickname("테스트 사용자")
-            .email("test@example.com")
-            .role(Role.USER)
-            .build()
+        val user = User(
+            null,
+            System.nanoTime(),
+            "테스트 사용자",
+            "test@example.com",
+            Role.USER,
+            AuthProvider.KAKAO,
+            null,
+            null
+        )
         entityManager.persist(user)
 
         val goods = Goods.of("테스트 상품", "Repository 테스트 상품", 10_000, null)
