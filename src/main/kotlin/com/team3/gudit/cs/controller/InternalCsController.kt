@@ -1,7 +1,11 @@
 package com.team3.gudit.cs.controller
 
+import com.team3.gudit.global.exception.ErrorResponse
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import com.team3.gudit.cs.dto.CsPaymentStatusResponse
 import com.team3.gudit.payment.service.PaymentService
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
@@ -32,16 +36,18 @@ class InternalCsController(
     )
     @ApiResponses(
         value = [
+            ApiResponse(responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "내부 API 키 누락 또는 불일치"),
             ApiResponse(
                 responseCode = "200",
                 description = "결제 및 구매 상태 조회 성공"
             ),
             ApiResponse(
-                responseCode = "404",
+                responseCode = "404", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
                 description = "결제 정보를 찾을 수 없음"
             )
         ]
     )
+    @SecurityRequirement(name = "internalApiKey")
     @GetMapping("/{orderId}/cs-status")
     fun getPaymentStatus(@PathVariable orderId: String): ResponseEntity<CsPaymentStatusResponse> {
         val result = paymentService.getStatus(orderId)

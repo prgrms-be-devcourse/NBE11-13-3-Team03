@@ -1,5 +1,8 @@
 package com.team3.gudit.sale.controller
 
+import com.team3.gudit.global.exception.ErrorResponse
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import com.team3.gudit.auth.security.CustomUserDetails
 import com.team3.gudit.sale.dto.reqeust.SaleCreateRequestDto
 import com.team3.gudit.sale.dto.reqeust.SaleStatusUpdateRequestDto
@@ -45,12 +48,12 @@ class SaleApiController(
         value = [
             ApiResponse(responseCode = "201", description = "타임세일 등록 성공"),
             ApiResponse(
-                responseCode = "400",
+                responseCode = "400", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
                 description = "SALE_001, SALE_009, SALE_010: 판매 기간·초기 재고·최대 구매 수량이 올바르지 않음",
             ),
-            ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            ApiResponse(responseCode = "403", description = "타임세일 등록 권한 없음"),
-            ApiResponse(responseCode = "404", description = "GOODS_001: 해당 상품을 찾을 수 없음"),
+            ApiResponse(responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "인증되지 않은 사용자"),
+            ApiResponse(responseCode = "403", content = [Content()], description = "타임세일 등록 권한 없음"),
+            ApiResponse(responseCode = "404", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "GOODS_001: 해당 상품을 찾을 수 없음"),
         ],
     )
     @SecurityRequirement(name = "cookieAuth")
@@ -70,7 +73,7 @@ class SaleApiController(
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "타임세일 상세 조회 성공"),
-            ApiResponse(responseCode = "404", description = "SALE_005: 해당 판매 상품을 찾을 수 없음"),
+            ApiResponse(responseCode = "404", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "SALE_005: 해당 판매 상품을 찾을 수 없음"),
         ],
     )
     @GetMapping("/{saleId}")
@@ -98,12 +101,12 @@ class SaleApiController(
         value = [
             ApiResponse(responseCode = "200", description = "타임세일 수정 성공"),
             ApiResponse(
-                responseCode = "400",
+                responseCode = "400", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
                 description = "SALE_001, SALE_006, SALE_009, SALE_010: 수정할 수 없는 상태이거나 요청 값이 올바르지 않음",
             ),
-            ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            ApiResponse(responseCode = "403", description = "타임세일 수정 권한 없음"),
-            ApiResponse(responseCode = "404", description = "SALE_005: 해당 판매 상품을 찾을 수 없음"),
+            ApiResponse(responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "인증되지 않은 사용자"),
+            ApiResponse(responseCode = "403", content = [Content()], description = "타임세일 수정 권한 없음"),
+            ApiResponse(responseCode = "404", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "SALE_005: 해당 판매 상품을 찾을 수 없음"),
         ],
     )
     @SecurityRequirement(name = "cookieAuth")
@@ -123,10 +126,10 @@ class SaleApiController(
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "타임세일 상태 변경 성공"),
-            ApiResponse(responseCode = "400", description = "SALE_008: 올바르지 않은 판매 상태 변경 요청"),
-            ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            ApiResponse(responseCode = "403", description = "타임세일 상태 변경 권한 없음"),
-            ApiResponse(responseCode = "404", description = "SALE_005: 해당 판매 상품을 찾을 수 없음"),
+            ApiResponse(responseCode = "400", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "SALE_008: 올바르지 않은 판매 상태 변경 요청"),
+            ApiResponse(responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "인증되지 않은 사용자"),
+            ApiResponse(responseCode = "403", content = [Content()], description = "타임세일 상태 변경 권한 없음"),
+            ApiResponse(responseCode = "404", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "SALE_005: 해당 판매 상품을 찾을 수 없음"),
         ],
     )
     @SecurityRequirement(name = "cookieAuth")
@@ -146,10 +149,10 @@ class SaleApiController(
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "204", description = "타임세일 삭제 성공"),
-            ApiResponse(responseCode = "400", description = "SALE_007: 진행 중인 타임세일은 삭제할 수 없음"),
-            ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            ApiResponse(responseCode = "403", description = "타임세일 삭제 권한 없음"),
-            ApiResponse(responseCode = "404", description = "SALE_005: 해당 판매 상품을 찾을 수 없음"),
+            ApiResponse(responseCode = "400", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "SALE_007: 진행 중인 타임세일은 삭제할 수 없음"),
+            ApiResponse(responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "인증되지 않은 사용자"),
+            ApiResponse(responseCode = "403", content = [Content()], description = "타임세일 삭제 권한 없음"),
+            ApiResponse(responseCode = "404", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "SALE_005: 해당 판매 상품을 찾을 수 없음"),
         ],
     )
     @SecurityRequirement(name = "cookieAuth")
@@ -167,11 +170,11 @@ class SaleApiController(
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "Redis Warm-up 성공"),
-            ApiResponse(responseCode = "400", description = "SALE_013: 판매 대기 상태가 아니어서 Warm-up할 수 없음"),
-            ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            ApiResponse(responseCode = "403", description = "타임세일 관리 권한 없음"),
-            ApiResponse(responseCode = "404", description = "SALE_005: 해당 판매 상품을 찾을 수 없음"),
-            ApiResponse(responseCode = "500", description = "Redis Warm-up 처리 실패"),
+            ApiResponse(responseCode = "400", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "SALE_013: 판매 대기 상태가 아니어서 Warm-up할 수 없음"),
+            ApiResponse(responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "인증되지 않은 사용자"),
+            ApiResponse(responseCode = "403", content = [Content()], description = "타임세일 관리 권한 없음"),
+            ApiResponse(responseCode = "404", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "SALE_005: 해당 판매 상품을 찾을 수 없음"),
+            ApiResponse(responseCode = "500", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "Redis Warm-up 처리 실패"),
         ],
     )
     @SecurityRequirement(name = "cookieAuth")

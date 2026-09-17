@@ -1,5 +1,8 @@
 package com.team3.gudit.payment.controller
 
+import com.team3.gudit.global.exception.ErrorResponse
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import com.team3.gudit.payment.dto.PaymentConfirmRequest
 import com.team3.gudit.payment.dto.TossPaymentResponse
 import com.team3.gudit.payment.service.PaymentService
@@ -27,15 +30,15 @@ class PaymentController(
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "결제 승인 성공"),
-            ApiResponse(responseCode = "400", description = "결제 승인 요청 실패\n\n- PAYMENT_002: 결제 금액 불일치\n- PAYMENT_003: 주문 번호 불일치\n- PAYMENT_004: 결제 승인 실패\n"),
-            ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            ApiResponse(responseCode = "404", description = "결제 정보 없음\n\n- PAYMENT_001: 결제 정보를 찾을 수 없음\n"),
-            ApiResponse(responseCode = "409", description = "잘못된 결제 상태\n\n- PAYMENT_006: 현재 결제 상태에서 요청한 작업을 수행할 수 없음\n"),
-            ApiResponse(responseCode = "500", description = "결제 승인 후 처리 실패\n\n- PAYMENT_007: 승인 후 처리 실패로 결제를 취소함\n- PAYMENT_008: 승인 후 보상 처리 실패\n"),
-            ApiResponse(responseCode = "503", description = "결제 처리 상태 확인 실패\n\n- PAYMENT_005: 결제 처리 상태를 확인할 수 없음\n")
+            ApiResponse(responseCode = "400", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "결제 승인 요청 실패\n\n- PAYMENT_002: 결제 금액 불일치\n- PAYMENT_003: 주문 번호 불일치\n- PAYMENT_004: 결제 승인 실패\n"),
+            ApiResponse(responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "인증되지 않은 사용자"),
+            ApiResponse(responseCode = "404", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "결제 정보 없음\n\n- PAYMENT_001: 결제 정보를 찾을 수 없음\n"),
+            ApiResponse(responseCode = "409", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "잘못된 결제 상태\n\n- PAYMENT_006: 현재 결제 상태에서 요청한 작업을 수행할 수 없음\n"),
+            ApiResponse(responseCode = "500", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "결제 승인 후 처리 실패\n\n- PAYMENT_007: 승인 후 처리 실패로 결제를 취소함\n- PAYMENT_008: 승인 후 보상 처리 실패\n"),
+            ApiResponse(responseCode = "503", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "결제 처리 상태 확인 실패\n\n- PAYMENT_005: 결제 처리 상태를 확인할 수 없음\n")
         ]
     )
-    @SecurityRequirement(name = "accessCookie")
+    @SecurityRequirement(name = "cookieAuth")
     @PostMapping("/confirm")
     fun confirm(@RequestBody request: PaymentConfirmRequest): ResponseEntity<TossPaymentResponse> =
         ResponseEntity.ok(paymentService.confirm(request))
