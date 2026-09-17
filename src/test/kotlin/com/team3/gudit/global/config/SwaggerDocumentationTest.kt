@@ -18,7 +18,11 @@ import com.team3.gudit.outbox.consumer.StockRestoreConsumer
 import com.team3.gudit.goods.service.GoodsService
 import com.team3.gudit.goods.exception.GoodsErrorCode
 import com.team3.gudit.global.exception.BusinessException
+import com.team3.gudit.sale.service.SaleService
 import org.mockito.Mockito.*
+import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -30,6 +34,9 @@ class SwaggerDocumentationTest @Autowired constructor(
 ) {
     @field:MockitoBean
     private lateinit var goodsService: GoodsService
+
+    @field:MockitoBean
+    private lateinit var saleService: SaleService
 
     @Test
     fun `비로그인 사용자는 상품 목록과 상세 조회에 401을 받는다`() {
@@ -58,6 +65,34 @@ class SwaggerDocumentationTest @Autowired constructor(
         mockMvc.perform(get("/api/goods/1").servletPath("/api/goods/1")).andExpect(status().isNotFound())
         verify(goodsService).goodsList()
         verify(goodsService).goodsDetail(1L)
+    }
+
+    @Test
+    @WithMockUser(authorities = ["USER"])
+    fun `일반 사용자는 판매 수정과 수동 Warm-up을 실행할 수 없다`() {
+        mockMvc.perform(
+            put("/api/sales/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"),
+        ).andExpect(status().isForbidden())
+        mockMvc.perform(post("/api/sales/1/warmup"))
+            .andExpect(status().isForbidden())
+
+        verifyNoInteractions(saleService)
+    }
+
+    @Test
+    @WithMockUser(authorities = ["ADMIN"])
+    fun `관리자는 판매 수정과 수동 Warm-up 엔드포인트에 접근할 수 있다`() {
+        mockMvc.perform(
+            put("/api/sales/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"),
+        ).andExpect(status().isBadRequest())
+        mockMvc.perform(post("/api/sales/1/warmup"))
+            .andExpect(status().isOk())
+
+        verify(saleService).warmupSaleInfo(1L)
     }
 
     @Test

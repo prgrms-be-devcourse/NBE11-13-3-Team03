@@ -55,8 +55,10 @@ class SecurityConfig(
                     .requestMatchers(HttpMethod.GET, "/api/sales", "/api/sales/**").permitAll()
                     // 관리자 화면 / 상품 관리
                     .requestMatchers("/admin/**", "/api/goods/**").hasAuthority("ADMIN")
-                    // 판매 등록·수정·삭제
+                    // 판매 등록·수정·삭제 및 수동 재고 적재
                     .requestMatchers(HttpMethod.POST, "/api/sales").hasAuthority("ADMIN")
+                    .requestMatchers(HttpMethod.POST, "/api/sales/*/warmup").hasAuthority("ADMIN")
+                    .requestMatchers(HttpMethod.PUT, "/api/sales/**").hasAuthority("ADMIN")
                     .requestMatchers(HttpMethod.PATCH, "/api/sales/**").hasAuthority("ADMIN")
                     .requestMatchers(HttpMethod.DELETE, "/api/sales/**").hasAuthority("ADMIN")
                     .requestMatchers("/api/**").hasAnyAuthority("USER", "ADMIN")

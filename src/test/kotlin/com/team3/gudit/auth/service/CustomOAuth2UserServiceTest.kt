@@ -28,19 +28,7 @@ class CustomOAuth2UserServiceTest {
     private val service = CustomOAuth2UserService(repository, "")
     private val restTemplate = RestTemplate()
     private val server = MockRestServiceServer.bindTo(restTemplate).build()
-    private val registration = ClientRegistration.withRegistrationId("kakao")
-        .clientId("test-client")
-        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-        .redirectUri("http://localhost/login/oauth2/code/kakao")
-        .authorizationUri("https://example.test/authorize")
-        .tokenUri("https://example.test/token")
-        .userInfoUri("https://example.test/userinfo")
-        .userNameAttributeName("id")
-        .build()
-    private val request = OAuth2UserRequest(
-        registration,
-        OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, "test-token", Instant.now(), Instant.now().plusSeconds(60)),
-    )
+    private val request = createRequest("id")
 
     init {
         service.setRestOperations(restTemplate)
@@ -80,5 +68,26 @@ class CustomOAuth2UserServiceTest {
         verify(repository).findByKakaoIdAndProvider(123L, AuthProvider.KAKAO)
         verifyNoMoreInteractions(repository)
         server.verify()
+    }
+
+    private fun createRequest(nameAttributeKey: String): OAuth2UserRequest {
+        val registration = ClientRegistration.withRegistrationId("kakao")
+            .clientId("test-client")
+            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .redirectUri("http://localhost/login/oauth2/code/kakao")
+            .authorizationUri("https://example.test/authorize")
+            .tokenUri("https://example.test/token")
+            .userInfoUri("https://example.test/userinfo")
+            .userNameAttributeName(nameAttributeKey)
+            .build()
+        return OAuth2UserRequest(
+            registration,
+            OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER,
+                "test-token",
+                Instant.now(),
+                Instant.now().plusSeconds(60),
+            ),
+        )
     }
 }
