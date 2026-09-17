@@ -24,4 +24,10 @@
 
 ## 별도 확인 사항
 
+### PR #19 리뷰 피드백: 상품 조회 권한 확인
+
+`SecurityConfig`는 공개 조회 규칙을 `GET /api/sales`, `/api/sales/**`에만 적용한다. 이후 `/api/goods/**`에는 HTTP 메서드와 관계없이 `hasAuthority("ADMIN")`을 적용하므로 상품 목록과 상세 조회도 관리자 전용이다. 판매 PUT/Warm-up의 공통 권한 규칙과는 다른 설정이다.
+
+상품 목록·상세의 개별 설명에도 ADMIN 전용을 명시했다. `SwaggerDocumentationTest`에서 실제 SecurityConfig와 필터를 사용해 두 경로의 비로그인 401, USER 403을 확인하고 서비스 호출이 차단되는지 검증한다. ADMIN은 목록 조회 성공과 상세 조회 서비스 호출까지 확인한다. 권한 정책 자체는 변경하지 않았다.
+
 현재 SecurityConfig에서 판매 수정(PUT)과 재고 Warm-up(POST)은 ADMIN 전용 규칙이 아닌 USER/ADMIN 공통 규칙을 적용받는다. 문서 변경 과정에서 접근 제어 정책을 변경하지 않았다. 관리자 전용이 의도라면 별도 보안 변경으로 검토해야 한다.

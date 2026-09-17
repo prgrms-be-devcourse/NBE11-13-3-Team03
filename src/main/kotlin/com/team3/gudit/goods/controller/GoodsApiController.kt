@@ -68,7 +68,7 @@ class GoodsApiController(
 
     @Operation(
         summary = "판매 가능한 상품 목록 조회",
-        description = "활성 상태인 상품 목록을 조회합니다.",
+        description = "관리자(ADMIN)만 활성 상태인 상품 목록을 조회할 수 있습니다. 일반 사용자와 비로그인 사용자는 접근할 수 없습니다.",
     )
     @ApiResponse(responseCode = "200", description = "상품 목록 조회 성공")
     @ApiResponse(responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "인증되지 않은 사용자")
@@ -81,7 +81,7 @@ class GoodsApiController(
 
     @Operation(
         summary = "상품 상세 조회",
-        description = "활성 상태인 특정 상품의 상세 정보를 조회합니다.",
+        description = "관리자(ADMIN)만 활성 상태인 특정 상품의 상세 정보를 조회할 수 있습니다. 일반 사용자와 비로그인 사용자는 접근할 수 없습니다.",
     )
     @ApiResponses(
         value = [

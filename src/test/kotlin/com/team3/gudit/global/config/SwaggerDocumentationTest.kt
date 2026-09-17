@@ -15,6 +15,10 @@ import com.team3.gudit.outbox.consumer.PaymentCompensationConsumerGroupInitializ
 import com.team3.gudit.outbox.consumer.StockRestoreConsumerGroupInitializer
 import com.team3.gudit.outbox.consumer.PaymentCompensationConsumer
 import com.team3.gudit.outbox.consumer.StockRestoreConsumer
+import com.team3.gudit.goods.service.GoodsService
+import com.team3.gudit.goods.exception.GoodsErrorCode
+import com.team3.gudit.global.exception.BusinessException
+import org.mockito.Mockito.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -24,6 +28,38 @@ class SwaggerDocumentationTest @Autowired constructor(
     private val mockMvc: MockMvc,
     private val objectMapper: ObjectMapper,
 ) {
+    @field:MockitoBean
+    private lateinit var goodsService: GoodsService
+
+    @Test
+    fun `비로그인 사용자는 상품 목록과 상세 조회에 401을 받는다`() {
+        for (path in listOf("/api/goods", "/api/goods/1")) {
+            mockMvc.perform(get(path).servletPath(path)).andExpect(status().isUnauthorized())
+        }
+        verifyNoInteractions(goodsService)
+    }
+
+    @Test
+    @WithMockUser(authorities = ["USER"])
+    fun `일반 사용자는 상품 목록과 상세 조회에 403을 받는다`() {
+        for (path in listOf("/api/goods", "/api/goods/1")) {
+            mockMvc.perform(get(path).servletPath(path)).andExpect(status().isForbidden())
+        }
+        verifyNoInteractions(goodsService)
+    }
+
+    @Test
+    @WithMockUser(authorities = ["ADMIN"])
+    fun `관리자는 상품 목록과 상세 조회 서비스에 접근한다`() {
+        `when`(goodsService.goodsList()).thenReturn(emptyList())
+        `when`(goodsService.goodsDetail(1L)).thenThrow(BusinessException(GoodsErrorCode.GOODS_NOT_FOUND))
+        mockMvc.perform(get("/api/goods").servletPath("/api/goods")).andExpect(status().isOk())
+        // 없는 상품의 업무 오류까지 도달했음을 확인한다. 인가 실패가 아니다.
+        mockMvc.perform(get("/api/goods/1").servletPath("/api/goods/1")).andExpect(status().isNotFound())
+        verify(goodsService).goodsList()
+        verify(goodsService).goodsDetail(1L)
+    }
+
     @Test
     @WithMockUser(authorities = ["ADMIN"])
     fun `생성된 문서의 인증 정의와 최신 API 설명이 일치한다`() {
