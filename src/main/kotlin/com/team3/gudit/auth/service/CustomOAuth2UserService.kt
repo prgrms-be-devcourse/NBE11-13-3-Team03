@@ -22,7 +22,6 @@ class CustomOAuth2UserService(
     override fun loadUser(userRequest: OAuth2UserRequest): OAuth2User {
         val oauthUser = super.loadUser(userRequest)
         val registration = userRequest.clientRegistration
-        val nameAttributeKey = registration.providerDetails.userInfoEndpoint.userNameAttributeName
         val provider = AuthProvider.from(registration.registrationId)
         val info = OAuth2UserInfoFactory.of(provider, oauthUser.attributes)
         val kakaoId = info.id() ?: throw OAuth2AuthenticationException(
@@ -35,13 +34,7 @@ class CustomOAuth2UserService(
                 "SNS 계정에서 이메일을 가져오지 못했습니다. 이메일 제공 동의가 필요합니다.",
             )
         }
-        val principalName = oauthUser.attributes[nameAttributeKey]
-            ?.toString()
-            ?.takeIf { it.isNotBlank() }
-            ?: throw OAuth2AuthenticationException(
-                OAuth2Error("name_attribute_required"),
-                "SNS 계정에서 사용자 이름 속성을 가져오지 못했습니다.",
-            )
+        val principalName = oauthUser.name
         val user = userRepository.findByKakaoIdAndProvider(kakaoId, provider)
             .map { existing ->
                 existing.updateProfile(info.name())

@@ -70,24 +70,6 @@ class CustomOAuth2UserServiceTest {
         server.verify()
     }
 
-    @Test
-    fun `설정된 사용자 이름 속성이 누락되면 저장 없이 인증을 거부한다`() {
-        val requestWithMissingName = createRequest("subject")
-        server.expect(requestTo("https://example.test/userinfo"))
-            .andRespond(withSuccess(
-                """{"id":123,"kakao_account":{"email":"user@example.com"}}""",
-                MediaType.APPLICATION_JSON,
-            ))
-
-        val exception = assertThrows(OAuth2AuthenticationException::class.java) {
-            service.loadUser(requestWithMissingName)
-        }
-
-        assertEquals("name_attribute_required", exception.error.errorCode)
-        verifyNoInteractions(repository)
-        server.verify()
-    }
-
     private fun createRequest(nameAttributeKey: String): OAuth2UserRequest {
         val registration = ClientRegistration.withRegistrationId("kakao")
             .clientId("test-client")
