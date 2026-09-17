@@ -129,7 +129,7 @@ class GoodsApiController(
     )
     @SecurityRequirement(name = "cookieAuth")
     @GetMapping("/admin/{goodsId}")
-    fun getAdminGoods(@PathVariable goodsId: Long?): ResponseEntity<GoodsDetailResponse> {
+    fun getAdminGoods(@PathVariable goodsId: Long): ResponseEntity<GoodsDetailResponse> {
         val response = goodsService.adminGoodsDetail(goodsId)
         return ResponseEntity.ok(response)
     }
@@ -154,7 +154,7 @@ class GoodsApiController(
         consumes = [MediaType.MULTIPART_FORM_DATA_VALUE],
     )
     fun updateGoods(
-        @PathVariable goodsId: Long?,
+        @PathVariable goodsId: Long,
         @Valid @RequestPart request: GoodsUpdateRequest,
         @RequestPart(value = "fileImage", required = false) fileImage: MultipartFile?,
     ): ResponseEntity<GoodsUpdateResponse> {
@@ -178,7 +178,7 @@ class GoodsApiController(
     @SecurityRequirement(name = "cookieAuth")
     @PatchMapping("/{goodsId}/status")
     fun updateGoodsStatus(
-        @PathVariable goodsId: Long?,
+        @PathVariable goodsId: Long,
         @Valid @RequestBody request: GoodsStatusUpdateRequest,
     ): ResponseEntity<GoodsStatusUpdateResponse> {
         val response = goodsService.updateGoodsStatus(goodsId, request)
@@ -199,7 +199,7 @@ class GoodsApiController(
     )
     @SecurityRequirement(name = "cookieAuth")
     @DeleteMapping("/{goodsId}")
-    fun deleteGoods(@PathVariable goodsId: Long?): ResponseEntity<Void> {
+    fun deleteGoods(@PathVariable goodsId: Long): ResponseEntity<Void> {
         goodsService.deleteGoods(goodsId)
         return ResponseEntity.noContent().build()
     }

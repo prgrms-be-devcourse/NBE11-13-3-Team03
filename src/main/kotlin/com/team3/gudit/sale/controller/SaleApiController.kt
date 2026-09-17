@@ -112,7 +112,7 @@ class SaleApiController(
     @SecurityRequirement(name = "cookieAuth")
     @PutMapping("/{saleId}")
     fun updateSale(
-        @PathVariable saleId: Long?,
+        @PathVariable saleId: Long,
         @Valid @RequestBody request: SaleUpdateRequestDto,
     ): ResponseEntity<SaleDetailResponseDto> {
         val response = saleService.updateSale(saleId, request)
@@ -135,7 +135,7 @@ class SaleApiController(
     @SecurityRequirement(name = "cookieAuth")
     @PatchMapping("/{saleId}/status")
     fun updateSaleStatus(
-        @PathVariable saleId: Long?,
+        @PathVariable saleId: Long,
         @Valid @RequestBody request: SaleStatusUpdateRequestDto,
     ): ResponseEntity<SaleStatusUpdateResponseDto> {
         val response = saleService.updateSaleStatus(saleId, request)
@@ -157,7 +157,7 @@ class SaleApiController(
     )
     @SecurityRequirement(name = "cookieAuth")
     @DeleteMapping("/{saleId}")
-    fun deleteSale(@PathVariable saleId: Long?): ResponseEntity<Void> {
+    fun deleteSale(@PathVariable saleId: Long): ResponseEntity<Void> {
         saleService.deleteSale(saleId)
         return ResponseEntity.noContent().build()
     }
@@ -179,7 +179,7 @@ class SaleApiController(
     )
     @SecurityRequirement(name = "cookieAuth")
     @PostMapping("/{saleId}/warmup")
-    fun warmupSale(@PathVariable saleId: Long?): ResponseEntity<String> {
+    fun warmupSale(@PathVariable saleId: Long): ResponseEntity<String> {
         saleService.warmupSaleInfo(saleId)
         return ResponseEntity.ok("타임세일(id=$saleId) 수동 Warm-up이 완료되었습니다.")
     }

@@ -1,6 +1,6 @@
 # Swagger 문서 점검
 
-기준: PR #18 (`5978694`), 2026-09-17. Springdoc이 생성하는 `/v3/api-docs`와 컨트롤러, 인증 설정, DTO, 예외 코드를 비교했다. Swagger UI를 사용하므로 REST Docs 생성 체계는 추가하지 않았다.
+기준: PR #20 병합 후 `dev` (`8ec679f`), 2026-09-17. Springdoc이 생성하는 `/v3/api-docs`와 컨트롤러, 인증 설정, DTO, 예외 코드를 비교했다. Swagger UI를 사용하므로 REST Docs 생성 체계는 추가하지 않았다.
 
 ## 수정한 불일치
 
@@ -30,4 +30,4 @@
 
 상품 목록·상세의 개별 설명에도 ADMIN 전용을 명시했다. `SwaggerDocumentationTest`에서 실제 SecurityConfig와 필터를 사용해 두 경로의 비로그인 401, USER 403을 확인하고 서비스 호출이 차단되는지 검증한다. ADMIN은 목록 조회 성공과 상세 조회 서비스 호출까지 확인한다. 권한 정책 자체는 변경하지 않았다.
 
-현재 SecurityConfig에서 판매 수정(PUT)과 재고 Warm-up(POST)은 ADMIN 전용 규칙이 아닌 USER/ADMIN 공통 규칙을 적용받는다. 문서 변경 과정에서 접근 제어 정책을 변경하지 않았다. 관리자 전용이 의도라면 별도 보안 변경으로 검토해야 한다.
+판매 수정(PUT)과 수동 재고 Warm-up(POST)은 관리 기능이라는 컨트롤러 설명과 403 응답 문서에 맞춰 ADMIN 전용 규칙을 적용했다. `SwaggerDocumentationTest`에서 USER의 두 요청이 403으로 차단되고 ADMIN은 엔드포인트에 접근하는지 검증한다.

@@ -16,7 +16,8 @@ class CustomOAuth2User(
     override fun getAttributes(): Map<String, Any> = attributes
     override fun getAuthorities(): Collection<GrantedAuthority> =
         listOf(SimpleGrantedAuthority(user?.role?.name ?: "USER"))
-    override fun getName(): String = attributes[nameAttributeKey].toString()
+    override fun getName(): String =
+        requireNotNull(attributes[nameAttributeKey]) { "OAuth2 사용자 이름 속성이 없습니다." }.toString()
 
     companion object {
         @JvmStatic
