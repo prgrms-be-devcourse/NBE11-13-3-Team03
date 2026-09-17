@@ -128,7 +128,7 @@
 
 ## ERD
 
-![ERD](docs/images/erd.svg)
+![ERD](docs/images/erd.png)
 
 ---
 
