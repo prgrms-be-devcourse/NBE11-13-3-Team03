@@ -1,5 +1,7 @@
 package com.team3.gudit.global.exception
 
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
@@ -25,7 +27,7 @@ class ErrorCodeController(
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "에러 코드 목록 조회 성공"),
-        ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+        ApiResponse(responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "인증되지 않은 사용자"),
     )
     @SecurityRequirement(name = "cookieAuth")
     fun getErrorCodes(): Map<String, List<ErrorCode>> {

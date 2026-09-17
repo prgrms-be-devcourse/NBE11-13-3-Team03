@@ -1,5 +1,6 @@
 package com.team3.gudit.goods.dto.response
 
+import io.swagger.v3.oas.annotations.media.Schema
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.team3.gudit.goods.constant.DateformatConstant
 import com.team3.gudit.goods.domain.enums.GoodsStatus
@@ -12,6 +13,7 @@ data class GoodsListResponse(
     val price: Int?,
     val imageUrl: String?,
     val status: GoodsStatus?,
+    @get:Schema(type = "string", format = "yyyy-MM-dd HH:mm:ss", example = "2026-09-17 10:00:00", description = "yyyy-MM-dd HH:mm:ss 형식")
     @field:JsonFormat(pattern = DateformatConstant.DATE_FORMAT)
     @get:JsonFormat(pattern = DateformatConstant.DATE_FORMAT)
     val createdAt: LocalDateTime?,

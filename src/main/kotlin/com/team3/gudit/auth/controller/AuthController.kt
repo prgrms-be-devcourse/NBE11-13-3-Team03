@@ -1,5 +1,8 @@
 package com.team3.gudit.auth.controller
 
+import com.team3.gudit.global.exception.ErrorResponse
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import com.team3.gudit.auth.jwt.JwtProperties
 import com.team3.gudit.auth.security.CustomUserDetails
 import com.team3.gudit.auth.service.AuthService
@@ -38,7 +41,7 @@ Access Token과 Refresh Token 쿠키를 제거합니다.
     )
     @ApiResponses(
         ApiResponse(responseCode = "204", description = "로그아웃 성공"),
-        ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 또는 유효하지 않은 Access Token"),
+        ApiResponse(responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "인증되지 않은 사용자 또는 유효하지 않은 Access Token"),
     )
     @SecurityRequirement(name = "cookieAuth")
     @PostMapping("/logout")
@@ -60,7 +63,7 @@ Refresh Token은 HttpOnly Cookie에서 전달받습니다.
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "토큰 재발급 성공"),
         ApiResponse(
-            responseCode = "401",
+            responseCode = "401", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
             description = """인증 실패
 
 - Refresh Token이 존재하지 않음

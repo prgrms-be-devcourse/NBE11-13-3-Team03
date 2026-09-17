@@ -1,5 +1,8 @@
 package com.team3.gudit.payment.controller
 
+import com.team3.gudit.global.exception.ErrorResponse
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import com.team3.gudit.payment.dto.TossPaymentWebhookRequest
 import com.team3.gudit.payment.service.PaymentWebhookService
 import io.swagger.v3.oas.annotations.Operation
@@ -25,7 +28,7 @@ class PaymentWebhookController(
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "Webhook 처리 성공"),
-            ApiResponse(responseCode = "500", description = "Webhook 처리 실패")
+            ApiResponse(responseCode = "500", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))], description = "Webhook 처리 실패")
         ]
     )
     @PostMapping("/payments")
