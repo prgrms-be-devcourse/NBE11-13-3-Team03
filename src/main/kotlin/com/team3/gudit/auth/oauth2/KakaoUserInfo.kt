@@ -7,7 +7,7 @@ data class KakaoUserInfo(private val attributes: Map<String, Any>) : OAuth2UserI
 
     override fun email(): String? {
         val account = kakaoAccount()
-        return if (account == null) null else account["email"].toString()
+        return account?.get("email")?.toString()
     }
 
     override fun name(): String? {
