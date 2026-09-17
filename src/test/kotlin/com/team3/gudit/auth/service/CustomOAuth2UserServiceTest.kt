@@ -28,19 +28,7 @@ class CustomOAuth2UserServiceTest {
     private val service = CustomOAuth2UserService(repository, "")
     private val restTemplate = RestTemplate()
     private val server = MockRestServiceServer.bindTo(restTemplate).build()
-    private val registration = ClientRegistration.withRegistrationId("kakao")
-        .clientId("test-client")
-        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-        .redirectUri("http://localhost/login/oauth2/code/kakao")
-        .authorizationUri("https://example.test/authorize")
-        .tokenUri("https://example.test/token")
-        .userInfoUri("https://example.test/userinfo")
-        .userNameAttributeName("id")
-        .build()
-    private val request = OAuth2UserRequest(
-        registration,
-        OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, "test-token", Instant.now(), Instant.now().plusSeconds(60)),
-    )
+    private val request = createRequest("id")
 
     init {
         service.setRestOperations(restTemplate)
@@ -80,5 +68,44 @@ class CustomOAuth2UserServiceTest {
         verify(repository).findByKakaoIdAndProvider(123L, AuthProvider.KAKAO)
         verifyNoMoreInteractions(repository)
         server.verify()
+    }
+
+    @Test
+    fun `설정된 사용자 이름 속성이 누락되면 저장 없이 인증을 거부한다`() {
+        val requestWithMissingName = createRequest("subject")
+        server.expect(requestTo("https://example.test/userinfo"))
+            .andRespond(withSuccess(
+                """{"id":123,"kakao_account":{"email":"user@example.com"}}""",
+                MediaType.APPLICATION_JSON,
+            ))
+
+        val exception = assertThrows(OAuth2AuthenticationException::class.java) {
+            service.loadUser(requestWithMissingName)
+        }
+
+        assertEquals("name_attribute_required", exception.error.errorCode)
+        verifyNoInteractions(repository)
+        server.verify()
+    }
+
+    private fun createRequest(nameAttributeKey: String): OAuth2UserRequest {
+        val registration = ClientRegistration.withRegistrationId("kakao")
+            .clientId("test-client")
+            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .redirectUri("http://localhost/login/oauth2/code/kakao")
+            .authorizationUri("https://example.test/authorize")
+            .tokenUri("https://example.test/token")
+            .userInfoUri("https://example.test/userinfo")
+            .userNameAttributeName(nameAttributeKey)
+            .build()
+        return OAuth2UserRequest(
+            registration,
+            OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER,
+                "test-token",
+                Instant.now(),
+                Instant.now().plusSeconds(60),
+            ),
+        )
     }
 }

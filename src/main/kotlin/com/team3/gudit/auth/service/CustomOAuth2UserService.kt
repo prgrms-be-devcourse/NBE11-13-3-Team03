@@ -35,6 +35,13 @@ class CustomOAuth2UserService(
                 "SNS 계정에서 이메일을 가져오지 못했습니다. 이메일 제공 동의가 필요합니다.",
             )
         }
+        val principalName = oauthUser.attributes[nameAttributeKey]
+            ?.toString()
+            ?.takeIf { it.isNotBlank() }
+            ?: throw OAuth2AuthenticationException(
+                OAuth2Error("name_attribute_required"),
+                "SNS 계정에서 사용자 이름 속성을 가져오지 못했습니다.",
+            )
         val user = userRepository.findByKakaoIdAndProvider(kakaoId, provider)
             .map { existing ->
                 existing.updateProfile(info.name())
@@ -52,7 +59,7 @@ class CustomOAuth2UserService(
                     ),
                 )
             }
-        return CustomOAuth2User(user, provider, info, oauthUser.attributes, nameAttributeKey)
+        return CustomOAuth2User(user, provider, info, oauthUser.attributes, principalName)
     }
 
     private fun isAdmin(kakaoId: Long?): Boolean {

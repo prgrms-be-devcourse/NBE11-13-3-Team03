@@ -1,6 +1,8 @@
 package com.team3.gudit.auth.jwt
 
 import com.team3.gudit.auth.security.CustomUserDetails
+import com.team3.gudit.global.exception.BusinessException
+import com.team3.gudit.global.exception.GlobalErrorCode
 import com.team3.gudit.user.domain.entity.Role
 import com.team3.gudit.user.domain.entity.User
 import io.jsonwebtoken.Claims
@@ -29,7 +31,10 @@ class TokenProvider(private val jwtProperties: JwtProperties) {
     }
 
     fun generateToken(user: User, validity: Duration, tokenType: TokenType): String {
-        val userId = requireNotNull(user.id) { "토큰을 발급할 사용자 ID가 없습니다." }
+        val userId = user.id ?: throw BusinessException(
+            GlobalErrorCode.INTERNAL_SERVER_ERROR,
+            "토큰을 발급할 사용자 ID가 없습니다.",
+        )
         val now = Date()
         val expiration = Date(now.time + validity.toMillis())
         return Jwts.builder()

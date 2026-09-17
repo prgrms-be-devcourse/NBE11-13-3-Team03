@@ -2,7 +2,10 @@ package com.team3.gudit.auth.jwt
 
 import com.team3.gudit.user.domain.entity.Role
 import com.team3.gudit.user.domain.entity.User
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import com.team3.gudit.global.exception.BusinessException
+import com.team3.gudit.global.exception.GlobalErrorCode
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.util.Base64
@@ -19,9 +22,11 @@ class TokenProviderNullSafetyTest {
         val tokenProvider = TokenProvider(properties)
         val transientUser = User(role = Role.USER)
 
-        assertThatThrownBy {
+        val exception = assertThrows(BusinessException::class.java) {
             tokenProvider.generateToken(transientUser, Duration.ofMinutes(30), TokenType.ACCESS)
-        }.isInstanceOf(IllegalArgumentException::class.java)
-            .hasMessage("토큰을 발급할 사용자 ID가 없습니다.")
+        }
+
+        assertEquals(GlobalErrorCode.INTERNAL_SERVER_ERROR, exception.errorCode)
+        assertEquals("토큰을 발급할 사용자 ID가 없습니다.", exception.message)
     }
 }
