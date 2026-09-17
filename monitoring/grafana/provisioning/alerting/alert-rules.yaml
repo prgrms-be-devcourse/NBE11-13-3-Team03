@@ -439,7 +439,7 @@ groups:
                       increase(
                         gudit_redis_stream_consumer_processing_failure_total{
                           job="gudit"
-                        }[5m]
+                        }[1m]
                       )
                     )
                   )
@@ -480,7 +480,11 @@ groups:
           for: 10s
           annotations:
             summary: Gudit Redis Stream Consumer에서 반복적인 처리 실패가 발생했습니다.
-            description: 최근 5분 동안 Redis Stream Consumer 처리 실패가 3회 이상 발생했습니다. stream 라벨과 동일한 traceId의 Loki 로그를 확인해야 합니다.
+            description: >-
+              최근 1분 동안 {{ $labels.stream }} Consumer 처리 실패가
+              {{ printf "%.0f" $values.A.Value }}건 발생했습니다.
+              알림 기준은 3건 이상입니다.
+              동일한 traceId로 Loki 로그를 확인해야 합니다.
           labels:
             component: redis-stream
             service: gudit

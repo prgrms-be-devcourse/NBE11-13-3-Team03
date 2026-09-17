@@ -4,12 +4,12 @@
   "metadata": {
     "name": "gudit-observability-local",
     "namespace": "default",
-    "uid": "988e4715-1ec1-4431-ac17-3dea2cbc6236",
-    "resourceVersion": "1789406069167015",
-    "generation": 13,
-    "creationTimestamp": "2026-09-14T06:52:14Z",
+    "uid": "75e8099d-9cbd-4668-aa84-c0c4a2f03e50",
+    "resourceVersion": "1789626879435995",
+    "generation": 5,
+    "creationTimestamp": "2026-09-17T05:49:04Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "713323881623552"
+      "grafana.app/deprecatedInternalID": "1784592720379904"
     },
     "annotations": {
       "grafana.app/createdBy": "access-policy:service",
@@ -17,11 +17,11 @@
       "grafana.app/managerAllowsEdits": "true",
       "grafana.app/managerId": "Gudit Dashboards",
       "grafana.app/saved-from-ui": "Grafana v13.2.1 (56cd3e9288)",
-      "grafana.app/sourceChecksum": "8e531aa9c6732be5aec1d7796c630767",
+      "grafana.app/sourceChecksum": "5e3dec7ce088f673854fa103abc45843",
       "grafana.app/sourcePath": "/var/lib/grafana/dashboards/gudit-observability-local.json",
-      "grafana.app/sourceTimestamp": "1789368757000",
+      "grafana.app/sourceTimestamp": "1789513164000",
       "grafana.app/updatedBy": "user:bfy3n4ya1yz9ce",
-      "grafana.app/updatedTimestamp": "2026-09-14T17:14:29Z"
+      "grafana.app/updatedTimestamp": "2026-09-17T06:34:39Z"
     }
   },
   "spec": {
@@ -1786,7 +1786,7 @@
         "kind": "Panel",
         "spec": {
           "id": 23,
-          "title": "Redis Stream Retry Count",
+          "title": "Redis Stream Retry Count (Since Startup)",
           "description": "",
           "links": [],
           "data": {
@@ -1806,7 +1806,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum by (stream) (\n  increase(\n    gudit_redis_stream_retry_total{\n      environment=\"local\"\n    }[$__range]\n  )\n)",
+                        "expr": "sum by (stream) (\n  gudit_redis_stream_retry_total{\n    environment=\"local\"\n  }\n)",
                         "instant": true,
                         "legendFormat": "{{stream}}",
                         "range": false
@@ -2195,9 +2195,9 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(\n  0.95,\n  sum by (le, stream) (\n    rate(\n      gudit_redis_stream_consumer_processing_seconds_bucket{\n        environment=\"local\",\n        result=\"success\"\n      }[5m]\n    )\n  )\n) * 1000",
+                        "expr": "histogram_quantile(\n  0.95,\n  sum by (le, stream, result) (\n    rate(\n      gudit_redis_stream_consumer_processing_seconds_bucket{\n        environment=\"local\"\n      }[5m]\n    )\n  )\n) * 1000",
                         "interval": "5s",
-                        "legendFormat": "{{stream}}",
+                        "legendFormat": "{{stream}} - {{result}}",
                         "range": true
                       }
                     },
@@ -3325,8 +3325,74 @@
           {
             "kind": "RowsLayoutRow",
             "spec": {
+              "title": "Presentation",
+              "collapse": true,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-24"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 0,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-23"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 8,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-22"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 8,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-26"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
               "title": "Main",
-              "collapse": false,
+              "collapse": true,
               "layout": {
                 "kind": "GridLayout",
                 "spec": {
@@ -3509,7 +3575,7 @@
                         "height": 8,
                         "element": {
                           "kind": "ElementReference",
-                          "name": "panel-22"
+                          "name": "panel-25"
                         }
                       }
                     },
@@ -3518,58 +3584,6 @@
                       "spec": {
                         "x": 12,
                         "y": 48,
-                        "width": 12,
-                        "height": 8,
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-23"
-                        }
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "x": 0,
-                        "y": 56,
-                        "width": 12,
-                        "height": 8,
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-24"
-                        }
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "x": 12,
-                        "y": 56,
-                        "width": 12,
-                        "height": 8,
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-25"
-                        }
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "x": 0,
-                        "y": 64,
-                        "width": 12,
-                        "height": 8,
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-26"
-                        }
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "x": 12,
-                        "y": 64,
                         "width": 12,
                         "height": 8,
                         "element": {
