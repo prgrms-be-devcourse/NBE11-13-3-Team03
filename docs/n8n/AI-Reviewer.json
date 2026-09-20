@@ -1,0 +1,933 @@
+{
+  "name": "Main",
+  "nodes": [
+    {
+      "parameters": {
+        "owner": {
+          "__rl": true,
+          "value": "prgrms-be-devcourse",
+          "mode": "list",
+          "cachedResultName": "prgrms-be-devcourse",
+          "cachedResultUrl": "https://github.com/prgrms-be-devcourse"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "NBE11-13-3-Team03",
+          "mode": "list",
+          "cachedResultName": "NBE11-13-3-Team03",
+          "cachedResultUrl": "https://github.com/prgrms-be-devcourse/NBE11-13-3-Team03"
+        },
+        "events": [
+          "pull_request"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.githubTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "96c420a6-6dca-40d7-94d8-e93479b8f181",
+      "name": "Github Trigger",
+      "webhookId": "73378476-94f0-4e26-a48f-bc25d8de69d2",
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/pulls/' + $json.body.number + '/files' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "page",
+                    "value": "={{ $pageCount + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ $response.body.length < 100 }}"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        720,
+        0
+      ],
+      "id": "3642162d-e9dd-4065-8e2d-c52e2e6a9442",
+      "name": "Get PR Files",
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node: validate the current PR snapshot and collect all file pages.\nconst before = $('Get PR Metadata').first().json;\nconst after = $input.first().json;\nif (before.statusCode !== 200 || after.statusCode !== 200) throw new Error('PR 메타데이터 조회 실패');\nconst pr = before.body;\nconst latest = after.body;\nconst event = $('Github Trigger').first().json.body;\nif (!pr.head?.sha || !pr.base?.sha || !pr.head?.repo?.full_name) throw new Error('PR 커밋 정보 누락');\nif (pr.state !== 'open' || pr.base.ref !== 'dev') throw new Error('분석 대상 PR 상태가 변경됨');\nif (event.pull_request?.head?.sha !== pr.head.sha) throw new Error('오래된 PR 이벤트: 최신 이벤트로 재실행 필요');\nif (latest.head?.sha !== pr.head.sha || latest.base?.sha !== pr.base.sha || latest.changed_files !== pr.changed_files || latest.state !== pr.state || latest.base?.ref !== pr.base.ref) throw new Error('파일 조회 중 PR 변경: 다시 실행 필요');\nconst filesByPath = new Map();\nfor (const item of $('Get PR Files').all()) {\n  const response = item.json;\n  if (response.statusCode !== 200 || !Array.isArray(response.body)) throw new Error('PR 변경 파일 조회 실패');\n  for (const file of response.body) {\n    if (typeof file.filename !== 'string' || !file.filename || !['added','removed','modified','renamed','copied','changed','unchanged'].includes(file.status)) throw new Error('잘못된 변경 파일 데이터');\n    if (filesByPath.has(file.filename)) throw new Error('중복 파일 페이지: 페이지 설정 확인 필요');\n    filesByPath.set(file.filename, { filename: file.filename, previousFilename: file.previous_filename ?? null, status: file.status, additions: file.additions, deletions: file.deletions, patch: file.patch ?? null });\n  }\n}\nconst files = [...filesByPath.values()];\nif (!Number.isInteger(pr.changed_files) || pr.changed_files < 0 || files.length !== pr.changed_files || pr.changed_files > 3000) throw new Error('변경 파일 수집 불완전: 리뷰 불필요로 처리할 수 없음');\nreturn [{ json: { repository: 'prgrms-be-devcourse/NBE11-13-3-Team03', prNumber: pr.number, headSha: pr.head.sha, baseSha: pr.base.sha, headRepository: pr.head.repo.full_name, changedFileCount: files.length, hasChanges: files.length > 0, files } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "9540718c-9cba-4816-a037-6f9de044853f",
+      "name": "Collect PR Files",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d4dd1e32-ffac-4d9b-aa19-3dbc61a9e3db",
+              "leftValue": "={{ $json.hasChanges }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1440,
+        0
+      ],
+      "id": "c2d57714-b0a4-4fe7-b139-ae7d86cf3f40",
+      "name": "Has Changes",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ...$input.first().json, analysisStatus: 'COMPLETED', domains: [], risk: 'LOW', testsChanged: false, newJavaFile: false, testRequired: false, aiReviewRequired: false, reasons: ['NO_CHANGED_FILES'] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        192
+      ],
+      "id": "22280587-52e3-418c-9497-c9bc6bbce317",
+      "name": "No Changes Result",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/pulls/' + $json.body.pull_request.number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "1bc14f06-cbb8-457c-8e94-ea08f2195b0e",
+      "name": "Get PR Metadata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/pulls/' + $('Get PR Metadata').first().json.body.number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "13da2cae-e9fe-4f8e-a3a8-77c101ea05af",
+      "name": "Verify PR Snapshot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        960,
+        0
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/' + $json.headRepository + '/git/trees/' + $json.headSha }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "recursive",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "6e69fa43-bc8d-456e-a9b5-e03ef23c14c2",
+      "name": "Get PR Head Tree",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1680,
+        -128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node: Run Once for All Items. Input is the PR head's recursive Git tree.\nconst collected = $('Collect PR Files').first().json;\nconst response = $input.first().json;\nif (response.statusCode !== 200 || !Array.isArray(response.body?.tree)) {\n  throw new Error('PR 테스트 파일 목록 조회 실패');\n}\nconst treeComplete = response.body.truncated === false;\nconst paths = response.body.tree.filter(e => e.type === 'blob').map(e => e.path);\nconst testPaths = paths.filter(p => /(^|\\/)src\\/test\\/(java|kotlin)\\/.+\\.(java|kt)$/.test(p));\nconst reasons = new Set();\nconst domains = new Set();\nconst findings = [];\nconst rank = { LOW: 0, MEDIUM: 1, HIGH: 2 };\nlet risk = 'LOW';\nlet testRequired = false;\nlet testsChanged = false;\nlet newJavaFile = false;\nlet aiReviewRequired = false;\nlet docsOnly = true;\nconst raise = value => { if (rank[value] > rank[risk]) risk = value; };\nconst isDoc = p => /(^|\\/)docs\\//i.test(p) || /(^|\\/)(readme|changelog|license)(\\.[^/]*)?$/i.test(p) || /\\.(md|mdx|rst|png|jpe?g|gif|webp|ico|svg)$/i.test(p);\nfor (const file of collected.files) {\n  const names = [file.filename, file.previousFilename].filter(Boolean);\n  const production = names.some(p => /(^|\\/)src\\/main\\//.test(p));\n  const source = names.some(p => /(^|\\/)src\\/main\\/(java|kotlin)\\/.+\\.(java|kt)$/.test(p));\n  const test = names.some(p => /(^|\\/)src\\/test\\//.test(p));\n  const build = names.some(p => /(^|\\/)(build\\.gradle(\\.kts)?|settings\\.gradle(\\.kts)?|gradle\\.properties|gradlew(\\.bat)?|Dockerfile[^/]*|docker-compose[^/]*|compose\\.ya?ml)$/.test(p) || /(^|\\/)(\\.github\\/workflows|gradle\\/wrapper)\\//.test(p));\n  const security = names.some(p => /(^|\\/)(auth|security|oauth2?|jwt|token)(\\/|\\.)/i.test(p) || /(SecurityConfig|TokenProvider|Authentication|Authorization)/i.test(p));\n  const high = production && names.some(p => /(service|controller|repository|purchase|inventory|sale|redis|scheduler|exception|\\.lua$)/i.test(p));\n  const doc = names.every(isDoc) && !production && !test && !build && !security;\n  docsOnly &&= doc;\n  for (const domain of ['auth','user','goods','sale','inventory','purchase','token','global','queue']) {\n    if (names.some(p => new RegExp('(^|/)' + domain + '(/|\\\\.)','i').test(p))) domains.add(domain.toUpperCase());\n  }\n  if (security) { domains.add('SECURITY'); reasons.add('AUTH_SECURITY_CHANGED'); raise('HIGH'); }\n  if (build) { domains.add('BUILD'); reasons.add('BUILD_CONFIG_CHANGED'); raise('MEDIUM'); }\n  if (test) { testsChanged = true; reasons.add('TESTS_CHANGED'); }\n  if (production) { testRequired = true; reasons.add('PRODUCTION_CHANGED'); raise(high ? 'HIGH' : 'MEDIUM'); }\n  if (file.status === 'added' && /\\.java$/.test(file.filename)) { newJavaFile = true; reasons.add('NEW_JAVA_FILE'); raise('MEDIUM'); }\n  if (!doc && !test) { aiReviewRequired = true; raise('MEDIUM'); }\n  if (security || build || production) aiReviewRequired = true;\n  let matchingTests = [];\n  let testStatus = 'NOT_APPLICABLE';\n  if (source) {\n    const candidates = names.map(p => p.match(/^(.*?)src\\/main\\/(?:java|kotlin)\\/(.*)\\.(?:java|kt)$/)).filter(Boolean);\n    matchingTests = testPaths.filter(p => candidates.some(m => {\n      return ['java','kotlin'].some(lang => ['Test','Tests','IntegrationTest','IT'].some(suffix =>\n        p === `${m[1]}src/test/${lang}/${m[2]}${suffix}.${lang === 'java' ? 'java' : 'kt'}`));\n    }));\n    testStatus = matchingTests.length ? 'FOUND_BY_NAMING' : treeComplete ? 'NO_NAMING_MATCH' : 'UNKNOWN';\n    if (!matchingTests.length) reasons.add(treeComplete ? 'RELATED_TEST_NOT_FOUND_BY_NAMING' : 'TEST_TREE_INCOMPLETE');\n  }\n  const addedLines = typeof file.patch === 'string' ? file.patch.split('\\n').filter(l => l.startsWith('+') && !l.startsWith('+++')).map(l => l.slice(1)).join('\\n') : null;\n  const kotlinPatterns = /\\.kt$/.test(file.filename) && addedLines !== null\n    ? { nonNullAssertion: addedLines.includes('!!'), lateinit: /\\blateinit\\b/.test(addedLines) } : null;\n  if (kotlinPatterns && (kotlinPatterns.nonNullAssertion || kotlinPatterns.lateinit)) { reasons.add('KOTLIN_RISK_PATTERN'); aiReviewRequired = true; raise('MEDIUM'); }\n  if (!doc && !test && addedLines === null) reasons.add('PATCH_UNAVAILABLE');\n  findings.push({ filename: file.filename, previousFilename: file.previousFilename, status: file.status, testStatus, matchingTests, kotlinPatterns, patchAvailable: addedLines !== null });\n}\nif (docsOnly) reasons.add('DOCS_ONLY');\nif (!treeComplete) reasons.add('TEST_TREE_INCOMPLETE');\nreturn [{ json: { analysisStatus: treeComplete ? 'COMPLETED' : 'PARTIAL', ...collected,\n  domains: [...domains].sort(), risk, testsChanged, newJavaFile, testRequired, aiReviewRequired,\n  docsOnly, testLookupComplete: treeComplete, reasons: [...reasons].sort(), findings,\n  limitations: ['대응 테스트는 동일 패키지·클래스명 기반 후보 검색이며 테스트 내용·커버리지 검증이 아님', 'Kotlin 패턴은 추가된 diff 줄의 휴리스틱 검사이며 주석·문자열을 구분하지 않음', '포맷 전용·자동 생성 여부가 확실하지 않은 소스는 보수적으로 리뷰 대상으로 유지']\n} }];\n"
+      },
+      "id": "a07468d0-2aee-479e-9651-70fe35658a04",
+      "name": "Analyze PR Changes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e606b28e-c3b4-497f-a3b3-3c576a885cb5",
+              "leftValue": "={{ $json.aiReviewRequired === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "dbb22b03-5722-4c67-9af8-ca199f33a93a",
+      "name": "AI Review Required",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2160,
+        -128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/user",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "c7fe7bd4-396b-4ddb-879e-072f1e2f65e6",
+      "name": "Get Reviewer Identity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2400,
+        -128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/issues/' + $('Analyze PR Changes').first().json.prNumber + '/comments' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "page",
+                    "value": "={{ $pageCount + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !Array.isArray($response.body) || $response.body.length < 100 }}"
+            }
+          }
+        }
+      },
+      "id": "c383afa6-f925-49d2-8ba5-8c2e77ab36b3",
+      "name": "Get Existing Reviews",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2640,
+        -128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const analysis = $('Analyze PR Changes').first().json;\nconst pr = $('Get PR Metadata').first().json.body;\nconst event = $('Github Trigger').first().json.body;\nconst reviewTrigger = event?.action === 'opened' && event?.pull_request?.draft === false ? 'opened' : event?.action === 'synchronize' && event?.pull_request?.draft === false ? 'synchronize' : event?.action === 'ready_for_review' && event?.pull_request?.draft === false ? 'ready_for_review' : event?.action === 'labeled' && event?.label?.name === 'ai-review' ? 'ai-review' : null;\nif (!reviewTrigger) return [{json:{status:'SKIPPED',reason:'EVENT_NOT_ALLOWED'}}];\nif (pr.state !== 'open' || pr.base?.ref !== 'dev' || pr.head?.sha !== analysis.headSha) return [{json:{status:'SKIPPED',reason:'PR_CHANGED_BEFORE_REVIEW'}}];\nif (reviewTrigger === 'ready_for_review' && pr.draft !== false) return [{json:{status:'SKIPPED',reason:'DRAFT_PR'}}];\nconst identity = $('Get Reviewer Identity').first().json;\nif (analysis.aiReviewRequired !== true) return [{json:{status:'SKIPPED',reason:'AI_NOT_REQUIRED'}}];\nif (identity.statusCode !== 200 || !identity.body?.id) return [{json:{status:'ERROR',reason:'IDENTITY_LOOKUP_FAILED'}}];\nconst marker = `<!-- gudit-ai-review:v1:${analysis.prNumber}:${analysis.headSha} -->`;\nfor (const item of $input.all()) {\n  if (item.json.statusCode !== 200 || !Array.isArray(item.json.body)) return [{json:{status:'ERROR',reason:'COMMENT_LOOKUP_FAILED'}}];\n  if (item.json.body.some(c => c.user?.id === identity.body.id && typeof c.body === 'string' && c.body.includes(marker))) return [{json:{status:'SKIPPED',reason:'ALREADY_COMMENTED',marker}}];\n}\nconst selected = analysis.files.filter(f => ![f.filename,f.previousFilename].filter(Boolean).every(p => /^(docs\\/)|\\.(md|png|jpe?g|gif|webp|ico)$/i.test(p)));\nconst score = f => {\n  const path = String(f.filename || '').toLowerCase(); let value = 0;\n  if (/(^|\\/)(auth|security|oauth2?|jwt|token)(\\/|\\.)/.test(path)) value += 100;\n  if (/src\\/main\\//.test(path)) value += 60;\n  if (/(service|controller|repository|transaction|inventory|purchase|sale|redis)/.test(path)) value += 50;\n  if (/(build\\.gradle|settings\\.gradle|gradle\\.properties|\\.github\\/workflows|docker|compose|application[^/]*\\.ya?ml)/.test(path)) value += 40;\n  if (/src\\/test\\//.test(path)) value += 20;\n  if (f.status === 'added') value += 5;\n  return value;\n};\nconst utf8Slice = (value, maxBytes) => {\n  let out = '', used = 0;\n  for (const char of String(value)) { const size = Buffer.byteLength(char, 'utf8'); if (used + size > maxBytes) break; out += char; used += size; }\n  return out;\n};\nconst candidates = selected.filter(f => typeof f.patch === 'string' && f.patch.length > 0)\n  .sort((a,b) => score(b) - score(a) || a.filename.localeCompare(b.filename));\nconst files = []; let diffBytes = 0;\nfor (const file of candidates) {\n  if (files.length >= 20 || diffBytes >= 32000) break;\n  const patch = utf8Slice(file.patch, Math.min(5000, 32000 - diffBytes));\n  if (!patch) continue;\n  const bytes = Buffer.byteLength(patch, 'utf8');\n  files.push({filename:file.filename,status:file.status,patch,patchTruncated:bytes < Buffer.byteLength(file.patch,'utf8')});\n  diffBytes += bytes;\n}\nif (!files.length) return [{json:{status:'SKIPPED',reason:'NO_REVIEWABLE_PATCH'}}];\nconst included = new Set(files.map(f => f.filename));\nconst analysisFindings = (analysis.findings || []).filter(f => included.has(f.filename));\nconst payload = {repository:analysis.repository,prNumber:analysis.prNumber,headSha:analysis.headSha,aiReviewRequired:true,marker,\n  reviewTrigger,title:String(pr.title ?? '').slice(0,200),description:String(pr.body ?? '').slice(0,1500),\n  analysis:{risk:analysis.risk,domains:analysis.domains,reasons:analysis.reasons,findings:analysisFindings},\n  files,omittedPatchFiles:selected.filter(f => !included.has(f.filename) || typeof f.patch !== 'string' || !f.patch.length).map(f=>f.filename),\n  inputStats:{changedFileCount:analysis.changedFileCount,selectedFileCount:files.length,diffBytes}};\nconst serialized = JSON.stringify(payload);\nconst inputBytes = Buffer.byteLength(serialized,'utf8');\nif (inputBytes > 70000 || files.length > 20) return [{json:{status:'SKIPPED',reason:'INPUT_TOO_LARGE',marker,inputStats:payload.inputStats}}];\nconst encoded = Buffer.from(serialized,'utf8').toString('base64');\nif (encoded.length > 120000 || !/^[A-Za-z0-9+/=]+$/.test(encoded)) return [{json:{status:'ERROR',reason:'INVALID_ENCODING'}}];\nreturn [{json:{status:'RUN',marker,prNumber:analysis.prNumber,headSha:analysis.headSha,reviewTrigger,inputStats:payload.inputStats,\n  command:\"/usr/bin/python3 /root/ai-workflow/reviewer/reviewer.py '\"+encoded+\"'\"}}];\n"
+      },
+      "id": "cc25a3b3-1697-4a54-8812-fb75aea40d40",
+      "name": "Prepare AI Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        -128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ddb300a6-5a6a-4471-b1ef-b4095df2e7d4",
+              "leftValue": "={{ $json.status === 'RUN' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "adc8ed8e-3d9e-4cd5-be5c-a77707cadbc2",
+      "name": "Run Codex Needed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3120,
+        -128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.command }}"
+      },
+      "id": "29e90e09-fd06-45d2-b393-a19fc3e492de",
+      "name": "Run Codex Reviewer",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3360,
+        -128
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "try { const r=JSON.parse($json.stdout ?? '{}'); if(!['READY','SKIPPED','ERROR'].includes(r.status)) throw new Error('Invalid status'); return [{json:{...r,shouldPost:r.status==='READY' && typeof r.body==='string' && r.body.length>0}}]; } catch { return [{json:{status:'ERROR',reason:'INVALID_WORKER_OUTPUT',shouldPost:false}}]; }"
+      },
+      "id": "2131fd55-6dff-425c-8cfd-f28b35424029",
+      "name": "Normalize Review Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        -128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "beb2234f-6910-42e0-b8d0-6d704c06842f",
+              "leftValue": "={{ $json.shouldPost === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "75d735a2-d707-41a7-835c-0ef87155d030",
+      "name": "Review Has Findings",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3840,
+        -128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/pulls/' + $json.prNumber }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "d1811f14-f5a5-455b-9bb0-b6395a072922",
+      "name": "Verify Review Head",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4080,
+        -128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const review=$('Normalize Review Result').first().json; const a=$('Analyze PR Changes').first().json; const p=$json; const ok=p.statusCode===200 && p.body?.state==='open' && p.body?.head?.sha===review.headSha && p.body?.base?.sha===a.baseSha && p.body?.base?.ref==='dev'; return [{json:{...review,shouldPost:ok,status:ok?'READY':'SKIPPED',reason:ok?null:'PR_CHANGED_DURING_REVIEW'}}];"
+      },
+      "id": "6eb9fc77-ca4b-4141-9e4d-604d17e830a0",
+      "name": "Check Review Freshness",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4320,
+        -128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b870f0a9-7b51-49f2-a2c5-4f1a4919b3bf",
+              "leftValue": "={{ $json.shouldPost === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ee9566f6-16fe-4fc1-a5cb-bbe5c919c1ab",
+      "name": "Publish Review Needed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4560,
+        -128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/issues/' + $json.prNumber + '/comments' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { body: $json.body } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "db2a6860-2913-4a7a-a897-b781dce48c94",
+      "name": "Post PR Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4800,
+        -128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:$json.statusCode===201 ? {status:'POSTED',url:$json.body.html_url,id:$json.body.id} : {status:'ERROR',reason:'COMMENT_PUBLISH_FAILED',httpStatus:$json.statusCode ?? null}}];"
+      },
+      "id": "66d6916f-125e-48af-8948-2599994f17fe",
+      "name": "Review Publish Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5040,
+        -128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6312e9a5-9fc9-4e06-be97-ce38b0bec3f8",
+              "leftValue": "={{ $json.body?.repository?.full_name === 'prgrms-be-devcourse/NBE11-13-3-Team03' && $json.body?.pull_request?.base?.ref === 'dev' && $json.body?.pull_request?.state === 'open' && ((['opened','synchronize','ready_for_review'].includes($json.body?.action) && $json.body?.pull_request?.draft === false) || ($json.body?.action === 'labeled' && $json.body?.label?.name === 'ai-review')) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        240,
+        0
+      ],
+      "id": "67295c0f-8986-49b7-952e-cfa7508315b3",
+      "name": "Review Trigger Allowed",
+      "retryOnFail": false
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Github Trigger": {
+      "main": [
+        [
+          {
+            "node": "Review Trigger Allowed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get PR Files": {
+      "main": [
+        [
+          {
+            "node": "Verify PR Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect PR Files": {
+      "main": [
+        [
+          {
+            "node": "Has Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Changes": {
+      "main": [
+        [
+          {
+            "node": "Get PR Head Tree",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Changes Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get PR Metadata": {
+      "main": [
+        [
+          {
+            "node": "Get PR Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify PR Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Collect PR Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get PR Head Tree": {
+      "main": [
+        [
+          {
+            "node": "Analyze PR Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze PR Changes": {
+      "main": [
+        [
+          {
+            "node": "AI Review Required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Review Required": {
+      "main": [
+        [
+          {
+            "node": "Get Reviewer Identity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Get Reviewer Identity": {
+      "main": [
+        [
+          {
+            "node": "Get Existing Reviews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing Reviews": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Review": {
+      "main": [
+        [
+          {
+            "node": "Run Codex Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Codex Needed": {
+      "main": [
+        [
+          {
+            "node": "Run Codex Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Run Codex Reviewer": {
+      "main": [
+        [
+          {
+            "node": "Normalize Review Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Review Result": {
+      "main": [
+        [
+          {
+            "node": "Review Has Findings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Has Findings": {
+      "main": [
+        [
+          {
+            "node": "Verify Review Head",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Verify Review Head": {
+      "main": [
+        [
+          {
+            "node": "Check Review Freshness",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Review Freshness": {
+      "main": [
+        [
+          {
+            "node": "Publish Review Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Review Needed": {
+      "main": [
+        [
+          {
+            "node": "Post PR Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Post PR Review": {
+      "main": [
+        [
+          {
+            "node": "Review Publish Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Trigger Allowed": {
+      "main": [
+        [
+          {
+            "node": "Get PR Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e83472c6-e8ab-42bb-b33e-ef1f2ceb2ffd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e8629b4ab4c408dc0e153296245227810628da7a39bfd2b5ce613d67439cead7"
+  },
+  "nodeGroups": [],
+  "id": "Jnz5lvdxM7ZHmmbM",
+  "tags": []
+}

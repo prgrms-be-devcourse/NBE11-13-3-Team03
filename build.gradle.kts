@@ -47,6 +47,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-actuator")// JWT API
 
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:testcontainers")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+
     compileOnly("org.projectlombok:lombok")
 
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")    // JWT 구현체

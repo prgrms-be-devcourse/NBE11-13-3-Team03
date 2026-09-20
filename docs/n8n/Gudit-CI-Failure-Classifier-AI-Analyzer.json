@@ -1,0 +1,1165 @@
+{
+  "name": "Gudit CI Failure Classifier + AI Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "owner": {
+          "__rl": true,
+          "value": "prgrms-be-devcourse",
+          "mode": "list",
+          "cachedResultName": "prgrms-be-devcourse",
+          "cachedResultUrl": "https://github.com/prgrms-be-devcourse"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "NBE11-13-3-Team03",
+          "mode": "list",
+          "cachedResultName": "NBE11-13-3-Team03",
+          "cachedResultUrl": "https://github.com/prgrms-be-devcourse/NBE11-13-3-Team03"
+        },
+        "events": [
+          "workflow_run"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.githubTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3529c3b9-919a-45bf-b127-6b60514896fa",
+      "name": "CI Workflow Trigger",
+      "webhookId": "7cd40e18-2da5-402a-9cfb-2e0b6b59f323",
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c7e4a3a3-02d3-4e46-862c-bb1b566c5e24",
+              "leftValue": "={{ $json.body?.repository?.full_name === 'prgrms-be-devcourse/NBE11-13-3-Team03' && $json.body?.action === 'completed' && $json.body?.workflow_run?.status === 'completed' && ['failure','timed_out','startup_failure','action_required'].includes($json.body?.workflow_run?.conclusion) && Number.isSafeInteger($json.body?.workflow_run?.id) && Number.isSafeInteger($json.body?.workflow_run?.run_attempt) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e9be0561-8151-4cb8-b8fb-fd97fff5b677",
+      "name": "Completed CI Failure",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        240,
+        0
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/actions/runs/' + $json.body.workflow_run.id + '/attempts/' + $json.body.workflow_run.run_attempt }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "8290d38a-c279-406c-9707-d087a0fd8f3f",
+      "name": "Get CI Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dafa0ea5-eac3-445f-a44b-9d299149d14a",
+              "leftValue": "={{ $json.body?.status === 'completed' && ['failure','timed_out','startup_failure','action_required'].includes($json.body?.conclusion) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f8f44f0b-d5a8-4349-b795-fe88cc399e6e",
+      "name": "Confirmed CI Failure",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        720,
+        0
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/actions/runs/' + $json.body.id + '/attempts/' + $json.body.run_attempt + '/jobs' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "page",
+                    "value": "={{ $pageCount+1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ $response.body.jobs.length < 100 }}"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "0d289fb9-44d0-44a3-9908-ccd3b9fae03b",
+      "name": "Get CI Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        960,
+        0
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const run=$('Get CI Run').first().json.body; const pages=$input.all(); const map=new Map();let total=null;for(const {json:r} of pages){if(r.statusCode!==200||!Array.isArray(r.body?.jobs))throw new Error('CI jobs lookup failed');total=r.body.total_count;for(const j of r.body.jobs)map.set(j.id,j);}const failed=[...map.values()].filter(j=>['failure','timed_out','startup_failure','action_required'].includes(j.conclusion));const incomplete=map.size!==total||failed.length>20; const chosen=failed.slice(0,20);if(!chosen.length)chosen.push({id:null,name:'No failed job metadata',conclusion:run.conclusion,steps:[]});return chosen.map(j=>({json:{runId:run.id,runAttempt:run.run_attempt,headSha:run.head_sha,jobId:j.id,jobName:j.name,conclusion:j.conclusion,jobsIncomplete:incomplete||!j.id,failedSteps:(j.steps||[]).filter(s=>['failure','timed_out','cancelled'].includes(s.conclusion)).map(s=>({name:s.name,number:s.number,conclusion:s.conclusion}))}}));"
+      },
+      "id": "f912c695-d0bf-4751-bdbc-a6307f3b1383",
+      "name": "Select Failed Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/actions/jobs/' + ($json.jobId || 0) + '/logs' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "e6d59659-b749-4c56-9075-cea8a0ad1522",
+      "name": "Get CI Log Location",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1440,
+        0
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const job=$('Select Failed Jobs').item.json; const response=$json; const payload={...job,downloadUrl:response.statusCode===302?(response.headers?.location ?? response.headers?.Location):null}; const encoded=Buffer.from(JSON.stringify(payload)).toString('base64'); return {json:{...job,command:\"/usr/bin/python3 /root/ai-workflow/ci-classifier/fetch-ci-log.py '\"+encoded+\"'\"}};"
+      },
+      "id": "db75d051-22b2-4add-a322-9cf4bfe26e79",
+      "name": "Prepare Log Download",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.command }}"
+      },
+      "id": "71aab2c0-263f-4e45-a701-cc3f56ba633c",
+      "name": "Download CI Job Log",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        0
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "try {const value=JSON.parse($json.stdout); if(typeof value.log!=='string')throw new Error('missing log');return {json:value};}catch{const {command,...job}=$('Prepare Log Download').item.json;return {json:{...job,log:'',logStatus:'UNAVAILABLE',logTruncated:false}};}"
+      },
+      "id": "5f7783a5-cce0-49df-9abd-8baa6e87f44e",
+      "name": "Read CI Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        0
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node: Run Once for All Items. Each item is one failed job + bounded log.\nconst results = $input.all().map(({json:job}) => {\n  const raw = typeof job.log === 'string' ? job.log : '';\n  const cleaned = raw.replace(/\\x1b\\[[0-9;]*m/g,'').replace(/^\\d{4}-\\d{2}-\\d{2}T[\\d:.]+Z\\s?/gm,'').replace(/\\b(?:gh[pousr]_[A-Za-z0-9_]{15,}|github_pat_[A-Za-z0-9_]+)\\b/g,'[REDACTED]')\n    .replace(/(authorization\\s*[:=]\\s*(?:bearer|basic)?\\s*)\\S+/ig,'$1[REDACTED]')\n    .replace(/((?:password|secret|access_token|refresh_token|api_key)\\s*[:=]\\s*)[^\\s,;]+/ig,'$1[REDACTED]')\n    .replace(/(https?:\\/\\/[^\\s?]+)\\?[^\\s]+/g,'$1?[REDACTED_QUERY]');\n  const patterns = {\n    COMPILE_ERROR: /compilation (?:failed|error)|unresolved reference|cannot find symbol|(?:^|\\n).*\\.(?:java|kt):\\d+(?::\\d+)?:?\\s*(?:error|unresolved)|(?:^|\\n)e: file:\\/\\/|> Task :[^\\n]*compile\\w* FAILED/im,\n    TEST_FAILURE: /there were failing tests|\\bAssertionFailedError\\b|\\bAssertionError\\b|\\b\\d+ tests? completed, \\d+ failed\\b|\\w+\\s*>\\s*[^\\n]+\\s+FAILED/i,\n    APPLICATION_CONTEXT_ERROR: /failed to load ApplicationContext|ApplicationContext failure threshold|APPLICATION FAILED TO START|BeanCreationException|UnsatisfiedDependencyException/i,\n    LINT_ERROR: /(?:ktlint|detekt|checkstyle|pmd)[^\\n]*(?:FAILED|violation|failed)|(?:lint|style) violations? found/i,\n    DEPENDENCY_ERROR: /could not resolve all (?:files|dependencies)|could not (?:find|resolve|download) [\\w.:-]+|could not (?:GET|HEAD) ['\"]?https?:|PKIX path building failed|Plugin \\[id:.*was not found/i,\n    INFRA_ERROR: /no space left on device|cannot connect to the Docker daemon|connection refused|runner (?:lost|disconnected)|the operation was canceled|job exceeded the maximum execution time|out of memory|Cannot allocate memory|ENOSPC|EAI_AGAIN/i\n  };\n  let categories=Object.entries(patterns).filter(([,r])=>r.test(cleaned)).map(([name])=>name);\n  // Context initialization failures commonly cascade into generic test failures.\n  if(categories.includes('APPLICATION_CONTEXT_ERROR')) categories=categories.filter(c=>c!=='TEST_FAILURE');\n  // Gradle wraps dependency/lint failures in generic compilation/test task errors.\n  if(categories.includes('DEPENDENCY_ERROR')) categories=categories.filter(c=>c!=='COMPILE_ERROR');\n  if(categories.includes('LINT_ERROR') && !/AssertionFailedError|AssertionError/.test(cleaned))categories=categories.filter(c=>c!=='TEST_FAILURE');\n  if(!categories.length && job.conclusion==='timed_out')categories=['INFRA_ERROR'];\n  const failureType=categories.length===1?categories[0]:'UNKNOWN';\n  const incomplete=job.logStatus!=='AVAILABLE' || job.logTruncated===true || job.jobsIncomplete===true;\n  const aiAnalysisRequired=incomplete || categories.length!==1 || failureType==='APPLICATION_CONTEXT_ERROR';\n  const tests = new Set();\n  for(const match of cleaned.matchAll(/^[ \\t]*([A-Za-z_$][\\w.$]*)[ \\t]+>[ \\t]+([^\\r\\n]+?)[ \\t]+FAILED[ \\t]*$/gm))tests.add(match[1]+' > '+match[2].trim());\n  const lines=cleaned.split(/\\r?\\n/), selected=new Set();\n  for(let i=0;i<lines.length;i++)if(/\\bERROR\\b|\\bFAILURE\\b|\\bFAILED\\b|Exception|Caused by|[Uu]nresolved reference|cannot find symbol|[Cc]ould not resolve|[Cc]ould not find|[Cc]onnection refused|[Nn]o space left/.test(lines[i]))for(let j=Math.max(0,i-1);j<=Math.min(lines.length-1,i+2);j++)selected.add(j);\n  if(!selected.size)for(let i=Math.max(0,lines.length-30);i<lines.length;i++)selected.add(i);\n  const indexes=[...selected].sort((a,b)=>a-b);\n  const excerpt=indexes.slice(0,160).map(i=>`${i+1}: ${lines[i]}`).join('\\n').slice(0,12000);\n  return {runId:job.runId,runAttempt:job.runAttempt,headSha:job.headSha,jobId:job.jobId,jobName:job.jobName,conclusion:job.conclusion,\n    failedSteps:job.failedSteps||[],failureType,categories,aiAnalysisRequired,failedTests:[...tests].slice(0,30),\n    logStatus:job.logStatus,logTruncated:job.logTruncated===true,jobsIncomplete:job.jobsIncomplete===true,\n    excerpt,excerptTruncated:indexes.length>160 || indexes.map(i=>lines[i]).join('\\n').length>12000,\n    reasons:[...(incomplete?['INCOMPLETE_LOG_OR_JOBS']:[]),...(categories.length>1?['MULTIPLE_FAILURE_TYPES']:[]),...(!categories.length?['NO_RECOGNIZED_PATTERN']:[]),...(failureType==='APPLICATION_CONTEXT_ERROR'?['CONTEXT_FAILURE_NEEDS_ANALYSIS']:[])]};\n});\nconst categories=[...new Set(results.flatMap(r=>r.categories))];\nreturn [{json:{schemaVersion:1,analysisStatus:results.some(r=>r.logStatus!=='AVAILABLE'||r.logTruncated||r.jobsIncomplete)?'PARTIAL':'COMPLETED',\n  runId:results[0]?.runId,runAttempt:results[0]?.runAttempt,headSha:results[0]?.headSha,\n  failureType:categories.length===1 && results.every(r=>r.failureType!=='UNKNOWN')?categories[0]:'UNKNOWN',\n  categories,aiAnalysisRequired:results.length===0||categories.length!==1||results.some(r=>r.aiAnalysisRequired),\n  failedJobCount:results.length,jobs:results,aiInvoked:false}}];\n"
+      },
+      "id": "085593c9-3460-4b8a-a006-ac940d6f615f",
+      "name": "Classify CI Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        0
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(item => item.json.aiAnalysisRequired === true || (item.json.aiAnalysisRequired === false && ['COMPILE_ERROR','TEST_FAILURE','LINT_ERROR','DEPENDENCY_ERROR','INFRA_ERROR'].includes(item.json.failureType)));"
+      },
+      "id": "c6928841-31c8-50af-9082-77447e3857aa",
+      "name": "Gate CI Failure Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2784,
+        128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/commits/' + $json.headSha + '/pulls' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "afe3a147-de79-5125-835d-73fdf47df58e",
+      "name": "Get Associated PRs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3008,
+        128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('Classify CI Failure').first().json;\nif ($json.statusCode!==200 || !Array.isArray($json.body)) return [];\nconst matches=$json.body.filter(pr => pr?.state==='open' && pr?.base?.ref==='dev' && pr?.head?.sha===c.headSha && Number.isInteger(pr?.number));\nif (!matches.length) return [];\nmatches.sort((a,b)=>a.number-b.number);\nreturn [{json:{status:'RUN',repository:'prgrms-be-devcourse/NBE11-13-3-Team03',prNumber:matches[0].number,headSha:c.headSha}}];"
+      },
+      "id": "66735fba-d72c-5e23-9949-1ab882ca5346",
+      "name": "Select CI Target PR",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3232,
+        128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/pulls/' + $json.prNumber }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "6ec54e65-c28e-5ac6-8f45-d1ed51b4ae57",
+      "name": "Get CI Target PR",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3440,
+        128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('Classify CI Failure').first().json;\nif ($json.statusCode!==200) return [];\nconst pr=$json.body;\nif (pr?.state!=='open' || pr?.base?.ref!=='dev' || pr?.head?.sha!==c.headSha || !Number.isInteger(pr?.number)) return [];\nreturn [{json:{status:'RUN',repository:'prgrms-be-devcourse/NBE11-13-3-Team03',prNumber:pr.number,headSha:c.headSha,pr}}];"
+      },
+      "id": "c80b74ae-c801-5fdb-87af-14e1fd934afe",
+      "name": "Validate CI Target PR",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3664,
+        128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/user",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "5db4123c-f5b3-5e13-8b27-40b33dc8f324",
+      "name": "Get CI Analysis Identity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3888,
+        128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/issues/' + $('Validate CI Target PR').first().json.prNumber + '/comments' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "page",
+                    "value": "={{ $pageCount + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !Array.isArray($response.body) || $response.body.length < 100 }}"
+            }
+          }
+        }
+      },
+      "id": "842ab5d1-e324-5e13-97f6-fbc4dc3aaa62",
+      "name": "Get Existing CI Analyses",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4112,
+        128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/pulls/' + $('Validate CI Target PR').first().json.prNumber + '/files' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "page",
+                    "value": "={{ $pageCount + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !Array.isArray($response.body) || $response.body.length < 100 }}"
+            }
+          }
+        }
+      },
+      "id": "5e9a2ac6-b5ea-512c-8ffa-f62da2cae312",
+      "name": "Get CI PR Files",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4320,
+        128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('Classify CI Failure').first().json;\nconst target=$('Validate CI Target PR').first().json;\nconst pr=target.pr;\nconst identity=$('Get CI Analysis Identity').first().json;\nconst ruleSummaryRequired=c.aiAnalysisRequired===false;\nconst prefix=ruleSummaryRequired?'gudit-ci-result':'gudit-ci-analysis';\nconst marker=`<!-- ${prefix}:v1:${c.runId}:${c.runAttempt}:${c.headSha} -->`;\nif (ruleSummaryRequired && !['COMPILE_ERROR','TEST_FAILURE','LINT_ERROR','DEPENDENCY_ERROR','INFRA_ERROR'].includes(c.failureType)) return [{json:{status:'SKIPPED',reason:'NO_SUPPORTED_FAILURE'}}];\nif (identity.statusCode!==200 || !identity.body?.id) return [{json:{status:'ERROR',reason:'IDENTITY_LOOKUP_FAILED'}}];\nfor (const item of $('Get Existing CI Analyses').all()) {\n  if (item.json.statusCode!==200 || !Array.isArray(item.json.body)) return [{json:{status:'ERROR',reason:'COMMENT_LOOKUP_FAILED'}}];\n  if (item.json.body.some(comment => comment.user?.id===identity.body.id && typeof comment.body==='string' && comment.body.includes(marker))) return [{json:{status:'SKIPPED',reason:'ALREADY_COMMENTED',marker}}];\n}\nconst byPath=new Map();\nfor (const item of $input.all()) {\n  if (item.json.statusCode!==200 || !Array.isArray(item.json.body)) return [{json:{status:'ERROR',reason:'PR_FILE_LOOKUP_FAILED'}}];\n  for (const file of item.json.body) {\n    if (!file?.filename || byPath.has(file.filename)) return [{json:{status:'ERROR',reason:'INVALID_PR_FILES'}}];\n    byPath.set(file.filename,{filename:file.filename,status:file.status,additions:file.additions,deletions:file.deletions,patch:typeof file.patch==='string'?file.patch:null});\n  }\n}\nconst allFiles=[...byPath.values()];\nif (!Number.isInteger(pr.changed_files) || pr.changed_files<0 || pr.changed_files>3000 || allFiles.length!==pr.changed_files) return [{json:{status:'ERROR',reason:'INCOMPLETE_PR_FILES'}}];\nconst failedTests=c.jobs.flatMap(job => Array.isArray(job.failedTests)?job.failedTests:[]);\nconst evidenceText=(failedTests.join(' ')+' '+c.jobs.map(job=>job.excerpt||'').join(' ')).toLowerCase();\nconst tokens=new Set(failedTests.flatMap(name=>String(name).match(/[A-Za-z_$][A-Za-z0-9_$]{3,}/g)||[]).map(x=>x.toLowerCase()));\nconst score=file=>{\n  const path=file.filename.toLowerCase(); const base=path.split('/').pop().replace(/\\.(java|kt|kts)$/,''); let value=0;\n  if (tokens.has(base)) value+=120;\n  if (evidenceText.includes(base) && base.length>3) value+=80;\n  if (/src\\/test\\//.test(path)) value+=30;\n  if (/src\\/main\\//.test(path)) value+=20;\n  if (/(build\\.gradle|settings\\.gradle|\\.github\\/workflows)/.test(path)) value+=15;\n  if (/^(docs\\/)|\\.(md|png|jpe?g|gif|webp|ico|svg)$/i.test(path)) value-=100;\n  if (!file.patch) value-=5;\n  return value;\n};\nconst ranked=allFiles.map(file=>({...file,_score:score(file)})).filter(file=>file._score>=0).sort((a,b)=>b._score-a._score || a.filename.localeCompare(b.filename));\nconst selected=[]; let diffChars=0;\nfor (const file of ranked.slice(0,30)) {\n  if (selected.length>=20) break;\n  const allowance=Math.max(0,20000-diffChars);\n  const patch=file.patch===null?null:file.patch.slice(0,Math.min(5000,allowance));\n  if (file.patch!==null && !patch.length) continue;\n  selected.push({filename:file.filename,status:file.status,patch,patchTruncated:file.patch!==null && patch.length<file.patch.length,score:file._score});\n  diffChars+=patch?.length||0;\n}\nconst logs=[]; let logChars=0;\nfor (const job of c.jobs.slice(0,4)) {\n  const allowance=Math.max(0,18000-logChars); if (!allowance) break;\n  const excerpt=String(job.excerpt||'').slice(0,Math.min(6000,allowance));\n  logs.push({jobName:job.jobName,failedSteps:job.failedSteps,failureType:job.failureType,failedTests:job.failedTests,excerpt,excerptTruncated:job.excerptTruncated===true || excerpt.length<String(job.excerpt||'').length,logStatus:job.logStatus});\n  logChars+=excerpt.length;\n}\nconst run=$('Get CI Run').first().json.body;\nconst payload={repository:target.repository,prNumber:target.prNumber,runId:c.runId,runAttempt:c.runAttempt,headSha:c.headSha,marker,aiAnalysisRequired:c.aiAnalysisRequired===true,ruleSummaryRequired,\n  workflowName:String(run?.name||'').slice(0,120),runUrl:String(run?.html_url||'').slice(0,500),title:String(pr.title||'').slice(0,200),description:String(pr.body||'').slice(0,1200),\n  classification:{analysisStatus:c.analysisStatus,failureType:c.failureType,categories:c.categories,failedJobCount:c.failedJobCount},jobs:c.jobs.map(job=>({jobName:job.jobName,failedSteps:job.failedSteps,failedTests:job.failedTests,failureType:job.failureType,reasons:job.reasons})).slice(0,4),\n  logs,files:selected,omittedFileCount:Math.max(0,allFiles.length-selected.length),inputStats:{changedFileCount:allFiles.length,fileCount:selected.length,diffChars,logChars,logsTruncated:logs.some(x=>x.excerptTruncated)}};\nconst raw=JSON.stringify(payload);\nif (raw.length>70000) return [{json:{status:'SKIPPED',reason:'INPUT_TOO_LARGE',marker,inputStats:payload.inputStats}}];\nconst encoded=Buffer.from(raw,'utf8').toString('base64');\nif (encoded.length>120000 || !/^[A-Za-z0-9+/=]+$/.test(encoded)) return [{json:{status:'ERROR',reason:'INVALID_ENCODING'}}];\nreturn [{json:{status:'RUN',marker,prNumber:target.prNumber,headSha:c.headSha,runId:c.runId,runAttempt:c.runAttempt,inputStats:payload.inputStats,command:\"/usr/bin/python3 /root/ai-workflow/ci-analyzer/ci_failure_analyzer.py '\"+encoded+\"'\"}}];"
+      },
+      "id": "693650f0-652a-5a41-a436-97885b27b848",
+      "name": "Prepare CI Failure Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4544,
+        128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(item => item.json.status === 'RUN');"
+      },
+      "id": "8ffbb93c-7343-5c39-ba05-6f9975368123",
+      "name": "Gate CI Result Worker",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4768,
+        128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.command }}"
+      },
+      "id": "40d7e090-5f31-549e-86fa-8db815378df2",
+      "name": "Run CI Result Worker",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        4992,
+        128
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  if ($json.error) return [{json:{status:'ERROR',reason:'WORKER_EXECUTION_FAILED',shouldPost:false}}];\n  const result=JSON.parse($json.stdout??'{}');\n  if (!['READY','SKIPPED','ERROR'].includes(result.status)) throw new Error('invalid status');\n  return [{json:{...result,aiInvoked:result.aiInvoked===true,shouldPost:result.status==='READY' && typeof result.body==='string' && result.body.length>0}}];\n} catch { return [{json:{status:'ERROR',reason:'INVALID_WORKER_OUTPUT',aiInvoked:false,shouldPost:false}}]; }"
+      },
+      "id": "5853e5ae-28cb-594f-938d-0395cdc5918d",
+      "name": "Normalize Failure Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5200,
+        128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(item => item.json.shouldPost === true);"
+      },
+      "id": "aca7b972-fd66-5703-b64a-aaa90b3f6c44",
+      "name": "Gate Ready CI Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5424,
+        128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/actions/runs/' + $('Classify CI Failure').first().json.runId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "10e6fe2a-083b-5334-bad4-e87e8f667cfe",
+      "name": "Verify Analysis CI Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5648,
+        128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/pulls/' + $('Validate CI Target PR').first().json.prNumber }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "41236b4f-ac3d-5fc1-9349-daf4ea21cabf",
+      "name": "Verify Analysis PR",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5872,
+        128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('Classify CI Failure').first().json;\nconst result=$('Normalize Failure Analysis').first().json;\nconst run=$('Verify Analysis CI Run').first().json;\nconst pr=$json;\nconst runOk=run.statusCode===200 && run.body?.status==='completed' && ['failure','timed_out','startup_failure','action_required'].includes(run.body?.conclusion) && run.body?.id===c.runId && run.body?.run_attempt===c.runAttempt && run.body?.head_sha===c.headSha;\nconst prOk=pr.statusCode===200 && pr.body?.state==='open' && pr.body?.base?.ref==='dev' && pr.body?.head?.sha===c.headSha;\nconst ok=runOk && prOk;\nreturn [{json:{...result,status:ok?'READY':'SKIPPED',reason:ok?null:'CI_OR_PR_CHANGED_DURING_ANALYSIS',shouldPost:ok,runId:c.runId,runAttempt:c.runAttempt,headSha:c.headSha,prNumber:$('Validate CI Target PR').first().json.prNumber}}];"
+      },
+      "id": "41cc53b8-b3b6-5251-87f9-c8f54eab1dc7",
+      "name": "Check CI Analysis Freshness",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6080,
+        128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(item => item.json.shouldPost === true);"
+      },
+      "id": "0bb756bc-5140-5cc6-b681-fa589c60e213",
+      "name": "Gate Publish CI Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6304,
+        128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.github.com/repos/prgrms-be-devcourse/NBE11-13-3-Team03/issues/' + $json.prNumber + '/comments' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { body: $json.body } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "4153eff7-13af-58d3-8339-8c1d5327aea4",
+      "name": "Post CI Failure Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        6528,
+        128
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "githubApi": {
+          "id": "NoblNsQQnWIZewZ7",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('Classify CI Failure').first().json;\nreturn [{json:$json.statusCode===201 ? {status:'POSTED',aiInvoked:$('Normalize Failure Analysis').first().json.aiInvoked===true,runId:c.runId,runAttempt:c.runAttempt,headSha:c.headSha,url:$json.body.html_url,id:$json.body.id,inputStats:$('Normalize Failure Analysis').first().json.inputStats} : {status:'ERROR',aiInvoked:$('Normalize Failure Analysis').first().json.aiInvoked===true,runId:c.runId,reason:'COMMENT_PUBLISH_FAILED',httpStatus:$json.statusCode??null}}];"
+      },
+      "id": "d5278abc-f55e-54cf-bba3-7e02f063b87d",
+      "name": "CI Analysis Publish Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6752,
+        128
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const classification = $('Classify CI Failure').first().json;\nconst result = $input.first().json;\nconst tests = [...new Set((classification.jobs || []).flatMap(job => Array.isArray(job.failedTests) ? job.failedTests : []).map(String).filter(Boolean))].slice(0, 12);\nif (result.status !== 'READY' || result.shouldPost !== true || tests.length === 0) return [];\nconst run = $('Get CI Run').first().json.body || {};\nconst target = $('Validate CI Target PR').first().json;\nconst clean = String(result.body || '')\n  .replace(/<!--[\\s\\S]*?-->/g, '')\n  .replace(/<[^>]+>/g, '')\n  .replace(/@/g, '＠')\n  .trim()\n  .slice(0, 2400);\nconst testLines = tests.map(name => `• ${name.replace(/@/g, '＠').slice(0, 240)}`).join('\\n');\nconst text = [\n  ':rotating_light: *Gudit CI 테스트 실패*',\n  `• PR: #${target.prNumber}`,\n  `• 분류: ${classification.failureType}`,\n  `• Commit: ${classification.headSha}`,\n  `• Actions: ${String(run.html_url || '').slice(0, 500)}`,\n  '',\n  '*실패한 테스트*',\n  testLines,\n  '',\n  '*실패 원인 분석*',\n  clean || '분석 결과를 생성하지 못했습니다.',\n].join('\\n').slice(0, 3500);\nconst payload = {\n  repository: 'prgrms-be-devcourse/NBE11-13-3-Team03',\n  prNumber: target.prNumber,\n  runId: classification.runId,\n  runAttempt: classification.runAttempt,\n  headSha: classification.headSha,\n  text,\n};\nconst encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64');\nreturn [{ json: { status: 'RUN', command: \"/usr/bin/python3 /root/ai-workflow/slack/send_slack_ci_alert.py '\" + encoded + \"'\" } }];"
+      },
+      "id": "f4101c17-e0df-5408-98e7-94ad18eca622",
+      "name": "Prepare Slack Test Failure Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6304,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.command }}"
+      },
+      "id": "12d933eb-7eec-5d08-9f2b-b6c0d283de00",
+      "name": "Send Slack Test Failure Alert",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        6544,
+        432
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "try { if ($json.error) throw new Error('SEND_COMMAND_FAILED'); const result=JSON.parse($json.stdout || '{}'); return [{json:result}]; } catch { return [{json:{status:'ERROR',reason:'INVALID_SLACK_ALERT_RESULT'}}]; }"
+      },
+      "id": "51246e2c-4cc9-5a37-b458-aa3920b07d2d",
+      "name": "Slack Test Failure Alert Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6784,
+        432
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "CI Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Completed CI Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completed CI Failure": {
+      "main": [
+        [
+          {
+            "node": "Get CI Run",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Get CI Run": {
+      "main": [
+        [
+          {
+            "node": "Confirmed CI Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmed CI Failure": {
+      "main": [
+        [
+          {
+            "node": "Get CI Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Get CI Jobs": {
+      "main": [
+        [
+          {
+            "node": "Select Failed Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Failed Jobs": {
+      "main": [
+        [
+          {
+            "node": "Get CI Log Location",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CI Log Location": {
+      "main": [
+        [
+          {
+            "node": "Prepare Log Download",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Log Download": {
+      "main": [
+        [
+          {
+            "node": "Download CI Job Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download CI Job Log": {
+      "main": [
+        [
+          {
+            "node": "Read CI Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CI Log Result": {
+      "main": [
+        [
+          {
+            "node": "Classify CI Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify CI Failure": {
+      "main": [
+        [
+          {
+            "node": "Gate CI Failure Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate CI Failure Result": {
+      "main": [
+        [
+          {
+            "node": "Get Associated PRs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Associated PRs": {
+      "main": [
+        [
+          {
+            "node": "Select CI Target PR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select CI Target PR": {
+      "main": [
+        [
+          {
+            "node": "Get CI Target PR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CI Target PR": {
+      "main": [
+        [
+          {
+            "node": "Validate CI Target PR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate CI Target PR": {
+      "main": [
+        [
+          {
+            "node": "Get CI Analysis Identity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CI Analysis Identity": {
+      "main": [
+        [
+          {
+            "node": "Get Existing CI Analyses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing CI Analyses": {
+      "main": [
+        [
+          {
+            "node": "Get CI PR Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CI PR Files": {
+      "main": [
+        [
+          {
+            "node": "Prepare CI Failure Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare CI Failure Result": {
+      "main": [
+        [
+          {
+            "node": "Gate CI Result Worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate CI Result Worker": {
+      "main": [
+        [
+          {
+            "node": "Run CI Result Worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run CI Result Worker": {
+      "main": [
+        [
+          {
+            "node": "Normalize Failure Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Failure Analysis": {
+      "main": [
+        [
+          {
+            "node": "Gate Ready CI Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate Ready CI Analysis": {
+      "main": [
+        [
+          {
+            "node": "Verify Analysis CI Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Analysis CI Run": {
+      "main": [
+        [
+          {
+            "node": "Verify Analysis PR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Analysis PR": {
+      "main": [
+        [
+          {
+            "node": "Check CI Analysis Freshness",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check CI Analysis Freshness": {
+      "main": [
+        [
+          {
+            "node": "Gate Publish CI Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare Slack Test Failure Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate Publish CI Analysis": {
+      "main": [
+        [
+          {
+            "node": "Post CI Failure Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post CI Failure Analysis": {
+      "main": [
+        [
+          {
+            "node": "CI Analysis Publish Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Slack Test Failure Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Test Failure Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Test Failure Alert": {
+      "main": [
+        [
+          {
+            "node": "Slack Test Failure Alert Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "965abb68-65f4-4c2d-a923-1ca4634a4c5e",
+  "meta": {
+    "instanceId": "e8629b4ab4c408dc0e153296245227810628da7a39bfd2b5ce613d67439cead7"
+  },
+  "nodeGroups": [],
+  "id": "GuditCIFailureClassifier20260914",
+  "tags": []
+}
