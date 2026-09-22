@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="diagram" width="1600" height="940" viewBox="0 0 1600 940" role="img" aria-labelledby="diagram-title diagram-desc">
+<title id="diagram-title">Gudit — 시스템 아키텍처</title>
+<desc id="diagram-desc">브라우저와 단일 Spring Boot 애플리케이션, PostgreSQL, Redis, Kakao OAuth2, Toss Payments, n8n의 논리적 시스템 관계를 나타낸다. Gudit 내부에 비즈니스 도메인 모듈과 Outbox Publisher, Streams Consumer가 함께 실행된다. 외부 API 요청과 Webhook, 문의 전달과 내부 상태 조회의 방향을 구분한다.</desc>
+<defs>
+  <marker id="right" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M1 1L8 5L1 9" fill="none" stroke="#496581" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  <marker id="left" markerWidth="10" markerHeight="10" refX="2" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M9 1L2 5L9 9" fill="none" stroke="#496581" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  <marker id="down" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1L5 8L9 1" fill="none" stroke="#496581" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  <style>text{font-family:'Noto Sans KR','NanumSquare','Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;} </style>
+</defs>
+<rect x="0" y="0" width="1600" height="940" rx="0" fill="#FFFFFF" stroke="none" stroke-width="0"/>
+<rect x="50" y="42" width="6" height="49" rx="3" fill="#365A7C" stroke="none" stroke-width="0"/>
+<text x="75" y="82" font-size="38" fill="#172B44" font-weight="750" text-anchor="start">Gudit  /  System Architecture</text>
+<text x="75" y="119" font-size="18" fill="#61738A" font-weight="400" text-anchor="start">한정 수량 굿즈 타임세일 서비스 · 논리적 시스템 구성도</text>
+<path d="M50 146 H1550" fill="none" stroke="#DEE5ED" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="54" y="275" font-size="15" fill="#66788D" font-weight="750" text-anchor="start" letter-spacing="1.2">CLIENT</text>
+<rect x="54" y="304" width="268" height="198" rx="11" fill="#F8FAFC" stroke="#B9C9D9" stroke-width="1.6"/>
+<rect x="141" y="341" width="93" height="61" rx="6" fill="#FFFFFF" stroke="#59799A" stroke-width="2.3"/>
+<path d="M187.5 403V419 M160 420H215" fill="none" stroke="#59799A" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="188" y="451" font-size="23" fill="#19334F" font-weight="700" text-anchor="middle">Web Browser</text>
+<text x="188" y="480" font-size="17" fill="#60728A" font-weight="450" text-anchor="middle">사용자 · 관리자</text>
+<rect x="386" y="176" width="748" height="488" rx="12" fill="#FBFCFE" stroke="#8CA9C5" stroke-width="1.9"/>
+<rect x="386" y="176" width="748" height="91" rx="12" fill="#EEF3F8" stroke="none" stroke-width="0"/>
+<rect x="386" y="239" width="748" height="28" rx="0" fill="#EEF3F8" stroke="none" stroke-width="0"/>
+<path d="M386 267H1134" fill="none" stroke="#D6E0E9" stroke-width="1.15" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="413" y="219" font-size="31" fill="#1B3655" font-weight="730" text-anchor="start">Gudit Application</text>
+<text x="414" y="249" font-size="17" fill="#536C87" font-weight="450" text-anchor="start">Spring Boot 4.1.0   ·   Kotlin / Java   ·   Spring MVC</text>
+<rect x="953" y="195" width="153" height="36" rx="18" fill="#FFFFFF" stroke="#B6C8D8" stroke-width="1.1"/>
+<text x="1029.5" y="218" font-size="12.6" fill="#375874" font-weight="750" text-anchor="middle" letter-spacing=".25">MODULAR MONOLITH</text>
+<text x="414" y="297" font-size="15" fill="#64768C" font-weight="730" text-anchor="start" letter-spacing="1">APPLICATION MODULES</text>
+<rect x="414" y="312" width="335" height="95" rx="7" fill="#FFFFFF" stroke="#CAD5E2" stroke-width="1.35"/>
+<rect x="432" y="335" width="4" height="50" rx="2" fill="#52749B" stroke="none" stroke-width="0"/>
+<text x="452" y="354" font-size="22" fill="#1B304A" font-weight="650" text-anchor="start">Auth / User</text>
+<text x="452" y="384" font-size="16" fill="#60728A" font-weight="400" text-anchor="start">Spring Security · OAuth2 · JWT</text>
+<rect x="769" y="312" width="338" height="95" rx="7" fill="#FFFFFF" stroke="#CAD5E2" stroke-width="1.35"/>
+<rect x="787" y="335" width="4" height="50" rx="2" fill="#52749B" stroke="none" stroke-width="0"/>
+<text x="807" y="354" font-size="22" fill="#1B304A" font-weight="650" text-anchor="start">Goods / Sale / Inventory</text>
+<text x="807" y="384" font-size="16" fill="#60728A" font-weight="400" text-anchor="start">타임세일 · 재고 관리</text>
+<rect x="414" y="425" width="335" height="95" rx="7" fill="#FFFFFF" stroke="#CAD5E2" stroke-width="1.35"/>
+<rect x="432" y="448" width="4" height="50" rx="2" fill="#52749B" stroke="none" stroke-width="0"/>
+<text x="452" y="467" font-size="22" fill="#1B304A" font-weight="650" text-anchor="start">Purchase / Payment</text>
+<text x="452" y="497" font-size="16" fill="#60728A" font-weight="400" text-anchor="start">구매 · 취소 · 외부 결제</text>
+<rect x="769" y="425" width="338" height="95" rx="7" fill="#FFFFFF" stroke="#CAD5E2" stroke-width="1.35"/>
+<rect x="787" y="448" width="4" height="50" rx="2" fill="#52749B" stroke="none" stroke-width="0"/>
+<text x="807" y="467" font-size="22" fill="#1B304A" font-weight="650" text-anchor="start">Customer Support</text>
+<text x="807" y="497" font-size="16" fill="#60728A" font-weight="400" text-anchor="start">문의 접수 · 내부 상태 조회</text>
+<rect x="414" y="544" width="693" height="98" rx="8" fill="#F3F6FA" stroke="#CBD8E4" stroke-width="1.3"/>
+<text x="431" y="568" font-size="15" fill="#365A78" font-weight="680" text-anchor="start">BACKGROUND WORKERS  /  동일 애플리케이션 프로세스</text>
+<path d="M430 578H1091" fill="none" stroke="#DAE2EB" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="438" y="609" font-size="21" fill="#1D354F" font-weight="700" text-anchor="start">Outbox Publisher</text>
+<text x="438" y="631" font-size="14.5" fill="#60728A" font-weight="400" text-anchor="start">PENDING 이벤트 발행</text>
+<path d="M739 592V628" fill="none" stroke="#C2CFDD" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="764" y="609" font-size="21" fill="#1D354F" font-weight="700" text-anchor="start">Redis Streams Consumers</text>
+<text x="764" y="631" font-size="14.5" fill="#60728A" font-weight="400" text-anchor="start">재고 복구 · 결제 보상 · 재시도</text>
+<text x="1268" y="183" font-size="15" fill="#66788D" font-weight="750" text-anchor="start" letter-spacing="1.1">EXTERNAL INTEGRATIONS</text>
+<rect x="1265" y="204" width="283" height="463" rx="12" fill="#F9FBFD" stroke="#CED8E3" stroke-width="1.45"/>
+<rect x="1279" y="225" width="255" height="103" rx="8" fill="#FFFFFF" stroke="#D1DCE7" stroke-width="1.3"/>
+<text x="1296" y="263" font-size="23" fill="#20334A" font-weight="700" text-anchor="start">Kakao OAuth2</text>
+<text x="1296" y="295" font-size="16" fill="#62758B" font-weight="400" text-anchor="start">인증 · 사용자 정보</text>
+<rect x="1279" y="349" width="255" height="130" rx="8" fill="#FFFFFF" stroke="#D1DCE7" stroke-width="1.3"/>
+<text x="1296" y="388" font-size="22" fill="#20334A" font-weight="700" text-anchor="start">Toss Payments</text>
+<text x="1296" y="415" font-size="15" fill="#62758B" font-weight="400" text-anchor="start">승인 · 조회 · 취소 API</text>
+<text x="1296" y="446" font-size="15" fill="#62758B" font-weight="400" text-anchor="start">결제 상태 Webhook</text>
+<rect x="1279" y="501" width="255" height="145" rx="8" fill="#FFFFFF" stroke="#D1DCE7" stroke-width="1.3"/>
+<text x="1296" y="542" font-size="23" fill="#20334A" font-weight="700" text-anchor="start">n8n</text>
+<text x="1296" y="574" font-size="15.5" fill="#62758B" font-weight="400" text-anchor="start">고객 문의 워크플로우</text>
+<text x="1296" y="606" font-size="15.5" fill="#62758B" font-weight="400" text-anchor="start">주문 상태 조회 · AI 분석</text>
+<path d="M322 367 H386" fill="none" stroke="#496581" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#right)"/>
+<path d="M386 427 H322" fill="none" stroke="#496581" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#right)"/>
+<text x="354" y="352" font-size="14" fill="#475569" font-weight="550" text-anchor="middle">HTTP</text>
+<text x="354" y="411" font-size="14" fill="#475569" font-weight="550" text-anchor="middle">응답</text>
+<path d="M1134 276 H1279" fill="none" stroke="#496581" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#right)"/>
+<text x="1205" y="263" font-size="14" fill="#475569" font-weight="550" text-anchor="middle">OAuth2 API</text>
+<path d="M1134 383 H1279" fill="none" stroke="#496581" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#right)"/>
+<text x="1205" y="370" font-size="14" fill="#475569" font-weight="550" text-anchor="middle">승인·취소</text>
+<path d="M1279 452 H1134" fill="none" stroke="#496581" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#right)"/>
+<text x="1205" y="439" font-size="14" fill="#475569" font-weight="550" text-anchor="middle">Webhook</text>
+<path d="M1134 533 H1279" fill="none" stroke="#496581" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#right)"/>
+<text x="1205" y="519" font-size="14" fill="#475569" font-weight="550" text-anchor="middle">문의 전송</text>
+<path d="M1279 619 H1134" fill="none" stroke="#496581" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#right)"/>
+<text x="1205" y="604" font-size="14" fill="#475569" font-weight="550" text-anchor="middle">상태 조회</text>
+<text x="54" y="746" font-size="15" fill="#66788D" font-weight="750" text-anchor="start" letter-spacing="1.2">DATA STORES</text>
+<rect x="401" y="766" width="340" height="133" rx="10" fill="#FFFFFF" stroke="#A8BED2" stroke-width="1.7"/>
+<rect x="401" y="766" width="340" height="6" rx="2" fill="#537494" stroke="none" stroke-width="0"/>
+<text x="426" y="810" font-size="28" fill="#20344D" font-weight="710" text-anchor="start">PostgreSQL</text>
+<text x="426" y="847" font-size="18" fill="#61758A" font-weight="400" text-anchor="start">업무 데이터 · outbox_events</text>
+<text x="426" y="877" font-size="15" fill="#78899B" font-weight="400" text-anchor="start">Spring Data JPA</text>
+<rect x="786" y="766" width="341" height="133" rx="10" fill="#FFFFFF" stroke="#A8BED2" stroke-width="1.7"/>
+<rect x="786" y="766" width="341" height="6" rx="2" fill="#537494" stroke="none" stroke-width="0"/>
+<text x="811" y="810" font-size="28" fill="#20344D" font-weight="710" text-anchor="start">Redis</text>
+<text x="811" y="847" font-size="18" fill="#61758A" font-weight="400" text-anchor="start">재고 · 구매 수량 · Streams</text>
+<text x="811" y="877" font-size="15" fill="#78899B" font-weight="400" text-anchor="start">Lua Script · AOF</text>
+<path d="M568 664 V765" fill="none" stroke="#496581" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#right)" marker-start="url(#right)"/>
+<path d="M953 664 V765" fill="none" stroke="#496581" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#right)" marker-start="url(#right)"/>
+<text x="581" y="720" font-size="16" fill="#536C83" font-weight="550" text-anchor="start">JPA  /  read · write</text>
+<text x="969" y="720" font-size="16" fill="#536C83" font-weight="550" text-anchor="start">Redis API  /  Streams</text>
+</svg>

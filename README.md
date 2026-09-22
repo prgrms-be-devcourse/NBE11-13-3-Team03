@@ -23,7 +23,7 @@
 
 3차 프로젝트에서는 기존 구조를 유지하면서 Transactional Outbox와 Redis Streams를 도입해   
 재고 복구 및 결제 보상 실패 시 재처리할 수 있도록 개선했다.   
-또한 Kotlin 전환과 모니터링·개발 자동화를 통해 코드 유지보수성과 운영 환경을 개선했다.
+또한 Kotlin 전환과 모니터링·개발 자동화를 통해 코드 구조를 정리하고, 운영 상태를 관찰하고 개발 과정을 자동화하는 환경을 구축했다.
 
 ---
 
@@ -39,11 +39,11 @@
 
 ## 팀원 및 역할
 
-| 팀원 | 역할                                                                       |
-| --- |--------------------------------------------------------------------------|
-| 신창석 | 팀장 / 인증·인가 / 공통 예외 처리 / Swagger / k6 테스트 / 테스트 자동화 / CI/CD               |
+| 팀원 | 역할                                                                 |
+| --- |--------------------------------------------------------------------|
+| 신창석 | 팀장 / 인증·인가 / 공통 예외 처리 / Swagger / k6 테스트 / 테스트 자동화 / CI 자동화        |
 | 박예은 | 구매 / 결제 / Outbox · Redis Streams / AI CS / Frontend / 결제 동시성 테스트 / 발표 자료 |
-| 정진협 | 상품 / 판매 / 재고 / 재고 동시성 테스트 / 모니터링 · 로깅 / 알림센터 / 발표                        |
+| 정진협 | 상품 / 판매 / 재고 / 재고 동시성 테스트 / 모니터링 · 로깅 / 알림센터 / 발표                  |
 
 ---
 
@@ -88,7 +88,7 @@
 ### 모니터링 및 운영 자동화
 
 * Prometheus·Grafana 기반 주요 지표 모니터링
-* Alloy·Loki 기반 로그 수집 및 traceId 추적
+* Alloy·Loki 기반 로그 수집 및 traceId를 통한 요청별 로그 연관 분석
 * 장애 발생 및 복구 시 Slack 알림
 * n8n·AI 기반 고객 문의 분석 및 답변 초안 생성
 
@@ -164,27 +164,27 @@
 
 ---
 
-## 시스템 구성도
+## 시스템 아키텍처
 
-![시스템 구성도](docs/images/system-architecture.png)
+![Gudit 시스템 아키텍처](docs/images/system-architecture.svg)
 
-일반 사용자와 관리자는 Spring Boot 애플리케이션을 통해 서비스에 접근한다.
+Gudit은 하나의 Spring Boot 애플리케이션에서 인증, 상품·판매·재고, 구매·결제, 고객 문의 기능을 처리하는 Modular Monolith 구조이다.
 
-상품·판매·구매·결제 데이터는 PostgreSQL에 저장하고, 판매 중 실시간 재고와 사용자별 구매 수량은 Redis에서 관리한다.
+사용자와 관리자는 웹 브라우저를 통해 서비스에 접근하며, 애플리케이션은 PostgreSQL과 Redis를 목적에 따라 구분하여 사용한다.
 
-재고 복구 및 결제 보상 요청은 PostgreSQL의 Outbox에 기록하고, Redis Streams를 통해 비동기로 전달하여 실패 시 재처리한다.
+- **PostgreSQL:** 사용자·상품·판매·구매·결제 데이터와 Outbox 이벤트 저장
+- **Redis:** 실시간 재고 및 사용자별 구매 수량 관리, Redis Streams 기반 이벤트 전달
+- **비동기 처리:** 애플리케이션 내부의 Outbox Publisher와 Consumer가 이벤트 발행·소비 및 실패 재처리 수행
+- **외부 연동:** Kakao OAuth2 인증, Toss Payments 결제 승인·취소 및 Webhook, n8n 기반 고객 문의 자동화
 
-외부 서비스로는 인증에 Kakao OAuth2, 결제에 Toss Payments를 연동했다.
-
-Prometheus·Grafana와 Alloy·Loki를 활용해 메트릭과 로그를 관찰하고, 장애 발생 시 Slack 알림을 전송한다.
-
-또한 GitHub Actions와 n8n 기반 워크플로우를 통해 CI 검증, AI 코드 리뷰, CI 실패 분석 및 고객 문의 분석을 자동화했다.
+재고 복구 및 결제 보상 요청은 업무 상태 변경과 함께 PostgreSQL의 Outbox에 기록한다.   
+이후 Publisher가 이벤트를 Redis Streams에 발행하고, Consumer가 이를 처리한다. 발행 또는 소비에 실패한 작업은 재처리할 수 있도록 구성했다.
 
 ---
 
 ## ERD
 
-![ERD](docs/images/erd.png)
+![Gudit ERD](docs/images/erd.svg)
 
 ---
 
@@ -204,7 +204,8 @@ Prometheus·Grafana와 Alloy·Loki를 활용해 메트릭과 로그를 관찰하
 
 모든 조건을 만족한 경우 재고 차감과 사용자별 구매 수량 증가를 하나의 Lua Script에서 원자적으로 처리한다.
 
-조건을 만족하지 못한 요청은 DB에 접근하기 전에 Redis 단계에서 실패 처리한다.
+Lua Script 내의 재고 및 구매 제한 조건을 만족하지 못하면 Redis 재고를 차감하지 않고 구매를 거절한다.   
+구매 생성에 필요한 사용자·판매 정보 조회와 중복 구매 검사는 별도로 수행한다.
 
 ---
 
@@ -295,7 +296,7 @@ Java와 Kotlin 환경에서 7개 시나리오를 각각 3회씩 총 42회 실행
 
 Java에서 Kotlin으로 전환한 이후 기존 비즈니스 동작이 유지되는지 확인했다.
 
-* 최종 통합 테스트: **283건 전체 통과**
+* 최종 테스트: 283건 전체 통과
 * 구매·결제 상태 전이 및 기존 비즈니스 로직 검증
 
 동시성 테스트에서도 예상 성공·거절 건수와 Redis·RDB 최종 상태가 일치해,   
@@ -354,12 +355,12 @@ Kotlin 소크 테스트에서는 30분간 약 100 RPS를 유지하고 HTTP 오�
 
 * Transactional Outbox와 Redis Streams를 도입해 재고 복구 및 결제 보상 요청을 기록하고, 발행·처리 실패 시 재처리하는 구조 구현
 * 이벤트 재전달에 대비한 재고 복구 및 결제 보상 멱등 처리 적용
-* Spring Actuator·Micrometer·Prometheus·Grafana·Loki·Alloy 기반 모니터링 및 traceId 로그 추적 환경 구축
+* Spring Actuator·Micrometer·Prometheus·Grafana·Loki·Alloy 기반 모니터링 및 traceId 기반 로그 연관 분석 환경 구축
 * GitHub Actions에서 JDK 25·Redis 환경으로 PR 테스트를 자동 실행하고, 성공·실패와 관계없이 테스트 보고서 보관
 * n8n 기반 AI 코드 리뷰 및 CI 실패 분석 자동화와 Swagger 인증·인가 문서 최신화
 * n8n·AI 기반 고객 문의 분석 및 Slack 답변 초안 전달 기능 구현, 내부 주문·결제 조회 API에 API Key 인증 적용
 * Production 파일의 98.1%(155/158개)를 Kotlin으로 전환하고 운영 코드 12.6% 감소
-* 통합 테스트 283건 통과 및 동시성 테스트 7개 시나리오의 Java·Kotlin 정합성 검증 완료
+* 테스트 283건 통과 및 동시성 테스트 7개 시나리오의 Java·Kotlin 정합성 검증 완료
 * 부하·소크 테스트를 통해 Kotlin 전환 전후 성능을 비교하고 고부하 구간의 남은 한계 확인
 
 ---
