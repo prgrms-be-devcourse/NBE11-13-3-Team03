@@ -25,6 +25,7 @@ import com.team3.gudit.outbox.entity.OutboxEventStatus;
 import com.team3.gudit.outbox.entity.OutboxEventType;
 import com.team3.gudit.outbox.repository.OutboxEventRepository;
 import com.team3.gudit.outbox.publisher.OutboxPublisher;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Range;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.junit.jupiter.api.DisplayName;
@@ -54,7 +55,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 //@SpringBootTest가 전체 Spring 애플리케이션 컨텍스트를 실행했고, 메인 애플리케이션에 @EnableScheduling이 있어서 @Scheduled 메서드들이 자동으로 실행
 //테스트에서는 Publisher와 Consumer가 자동 실행되지 않고, 이후 각 메서드를 직접 호출 가능
 @SpringBootTest(
-        properties = "gudit.scheduling.enabled=false"
+        properties = {
+                "gudit.scheduling.enabled=false",
+                "spring.data.redis.timeout=1s",
+                "spring.data.redis.connect-timeout=1s"
+        }
 )
 @Import(StockRestoreRecoveryE2ETest.ContainerConfiguration.class)
 class StockRestoreRecoveryE2ETest {
@@ -92,6 +97,10 @@ class StockRestoreRecoveryE2ETest {
 
     @Autowired
     private StockRestoreConsumer stockRestoreConsumer;
+
+    @Autowired
+    @Qualifier("redisContainer")
+    private GenericContainer<?> redisContainer;
 
     @Test
     @DisplayName("복구 E2E 테스트용 Redis 컨테이너에 연결된다.")
@@ -463,6 +472,139 @@ class StockRestoreRecoveryE2ETest {
         ).isZero();
     }
 
+    @Test
+    @DisplayName("Redis 발행 실패 시 Outbox를 PENDING으로 유지하고 복구 후 재발행한다")
+    void retryPendingOutboxAfterRedisRecovers() {
+        PurchaseFixture fixture =
+                createPurchasedFixture(
+                        9003L,
+                        "publisher-failure"
+                );
+
+        assertThat(
+                redisTemplate.opsForValue()
+                        .get(fixture.stockKey())
+        ).isEqualTo("9");
+
+        assertThat(
+                redisTemplate.opsForValue()
+                        .get(fixture.userPurchaseKey())
+        ).isEqualTo("1");
+
+        purchaseService.cancel(
+                fixture.user().getId(),
+                fixture.purchaseResponse.purchaseId()
+        );
+
+        List<OutboxEvent> pendingEvents =
+                outboxEventRepository
+                        .findAllByStatusOrderByCreatedAtAsc(
+                                OutboxEventStatus.PENDING
+                        );
+
+        assertThat(pendingEvents).hasSize(1);
+
+        OutboxEvent outboxEvent =
+                pendingEvents.getFirst();
+
+        assertThat(outboxEvent.getStatus())
+                .isEqualTo(OutboxEventStatus.PENDING);
+
+        redisContainer.getDockerClient()
+                .pauseContainerCmd(
+                        redisContainer.getContainerId()
+                )
+                .exec();
+
+        try {
+            // Publisher 내부에서 Redis 예외를 처리하므로
+            // 테스트 코드까지 예외가 전파되지는 않음
+            outboxPublisher.publishPendingEvents();
+        } finally {
+            // 테스트가 중간에 실패해도 반드시 Redis 복구
+            redisContainer.getDockerClient()
+                    .unpauseContainerCmd(
+                            redisContainer.getContainerId()
+                    )
+                    .exec();
+        }
+
+        String ping = redisTemplate
+                .getConnectionFactory()
+                .getConnection()
+                .ping();
+
+        assertThat(ping).isEqualTo("PONG");
+
+        OutboxEvent failedEvent =
+                outboxEventRepository
+                        .findById(outboxEvent.getId())
+                        .orElseThrow();
+
+        assertThat(failedEvent.getStatus())
+                .isEqualTo(OutboxEventStatus.PENDING);
+
+        assertThat(
+                redisTemplate.opsForValue()
+                        .get(fixture.stockKey())
+        ).isEqualTo("9");
+
+        assertThat(
+                redisTemplate.opsForValue()
+                        .get(fixture.userPurchaseKey())
+        ).isEqualTo("1");
+
+        outboxPublisher.publishPendingEvents();
+
+        OutboxEvent publishedEvent =
+                outboxEventRepository
+                        .findById(outboxEvent.getId())
+                        .orElseThrow();
+
+        assertThat(publishedEvent.getStatus())
+                .isEqualTo(OutboxEventStatus.PUBLISHED);
+
+        // then: 현재 eventId가 Redis Stream에 발행됨
+        List<MapRecord<String, Object, Object>> records =
+                redisTemplate.opsForStream().range(
+                        STOCK_RESTORE_STREAM,
+                        Range.unbounded()
+                );
+
+        assertThat(records)
+                .isNotNull()
+                .anySatisfy(record ->
+                        assertThat(
+                                record.getValue().get("eventId")
+                        ).isEqualTo(outboxEvent.getEventId())
+                );
+        // when: Consumer 처리
+        stockRestoreConsumer.consume();
+
+        // then: 최종 재고 정합성 복구
+        assertThat(
+                redisTemplate.opsForValue()
+                        .get(fixture.stockKey())
+        ).isEqualTo("10");
+
+        assertThat(
+                redisTemplate.opsForValue()
+                        .get(fixture.userPurchaseKey())
+        ).isNull();
+
+        var pendingSummary =
+                redisTemplate.opsForStream().pending(
+                        STOCK_RESTORE_STREAM,
+                        STOCK_RESTORE_GROUP
+                );
+
+        assertThat(pendingSummary).isNotNull();
+
+        assertThat(
+                pendingSummary.getTotalPendingMessages()
+        ).isZero();
+
+    }
 
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -475,6 +617,78 @@ class StockRestoreRecoveryE2ETest {
                     DockerImageName.parse("redis:7-alpine")
             ).withExposedPorts(6379);
         }
+    }
+
+    private PurchaseFixture createPurchasedFixture(
+            long kakaoId,
+            String suffix
+    ) {
+        User user = userRepository.save(
+                User.builder()
+                        .kakaoId(kakaoId)
+                        .nickname("outbox-" + suffix)
+                        .email("outbox-" + suffix + "@test.com")
+                        .role(Role.USER)
+                        .provider(AuthProvider.KAKAO)
+                        .build()
+        );
+
+        Goods goods = goodsRepository.save(
+                Goods.of(
+                        "Outbox " + suffix + " 상품",
+                        "재고 복구 장애 테스트 상품",
+                        15_000,
+                        "test-image.jpg"
+                )
+        );
+
+        LocalDateTime now = LocalDateTime.now();
+
+        Sale sale = saleRepository.save(
+                Sale.builder()
+                        .goods(goods)
+                        .createdBy(user.getId())
+                        .initialStock(10)
+                        .remainingStock(10)
+                        .maxPurchaseQuantity(1)
+                        .status(SaleStatus.READY)
+                        .startAt(now.minusMinutes(1))
+                        .endAt(now.plusMinutes(10))
+                        .build()
+        );
+
+        saleService.warmupSaleInfo(sale.getId());
+        saleService.startSale(sale.getId());
+
+        PurchaseCreateResponse purchaseResponse =
+                purchaseService.purchase(
+                        user.getId(),
+                        sale.getId()
+                );
+
+        String stockKey =
+                "sale:" + sale.getId() + ":stock";
+
+        String userPurchaseKey =
+                "sale:" + sale.getId()
+                        + ":user:" + user.getId();
+
+        return new PurchaseFixture(
+                user,
+                sale,
+                purchaseResponse,
+                stockKey,
+                userPurchaseKey
+        );
+    }
+
+    private record PurchaseFixture(
+            User user,
+            Sale sale,
+            PurchaseCreateResponse purchaseResponse,
+            String stockKey,
+            String userPurchaseKey
+    ) {
     }
 }
 
